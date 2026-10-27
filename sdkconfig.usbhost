@@ -1,0 +1,7 @@
+# Overlay for the USB keyboard stage. The native USB port is the host PHY, so logs go to UART0
+# (GPIO43 TX / GPIO44 RX on the headers; needs a USB-UART adapter).
+#
+#   idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.usbhost" reconfigure
+CONFIG_ESP_CONSOLE_UART_DEFAULT=y
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=n
+CONFIG_FT_ENABLE_USB_KBD=y

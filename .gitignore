@@ -1,0 +1,11 @@
+build/
+managed_components/
+sdkconfig
+sdkconfig.old
+dependencies.lock
+tests/host/test_pack
+tests/host/test_kbd_hid
+tests/host/test_editor
+tests/host/test_notes
+tests/host/test_format
+sdkconfig.bak*

@@ -1,0 +1,21 @@
+menu "FocusType"
+
+    config FT_APP
+        bool "Run the app (otherwise the display/keyboard bring-up test)"
+        default y
+
+    config FT_ENABLE_USB_KBD
+        bool "Enable USB host keyboard"
+        default n
+        help
+            Starts the USB host stack. This takes over the native USB port, so the USB
+            Serial/JTAG console stops working; use the UART0 console instead
+            (see sdkconfig.usbhost).
+
+    config FT_ENABLE_SD
+        bool "Mount the microSD card at boot"
+        default n
+        help
+            Needs the SD pins in components/board/include/board.h to be filled in.
+
+endmenu

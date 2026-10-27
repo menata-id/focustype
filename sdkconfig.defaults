@@ -1,0 +1,21 @@
+# Target and CPU
+CONFIG_IDF_TARGET="esp32s3"
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+CONFIG_FREERTOS_HZ=1000
+
+# Partition table: 3 MB app plus a 3 MB FAT partition used for notes until the microSD works.
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# Flash: 16 MB, as reported by esptool/the ROM on the real board (2026-10-27).
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+
+# 8 MB octal PSRAM (per the board listing)
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
+
+# Bring-up console: USB Serial/JTAG on the board's USB-C port.
+# When the USB host keyboard is enabled this port becomes the host PHY and the console
+# disappears; use sdkconfig.usbhost (UART0 console) for that stage.
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y

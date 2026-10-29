@@ -22,7 +22,7 @@ it, the geometry and behaviour are recorded here and in `components/ui/ui.c`.
 |---|---|---|---|
 | A1 | Boot / recovery draft found | not built | needs draft files and a boot check |
 | A2 | Home | built | `ui_home`, `key_home` |
-| B1 | Ctrl+N: empty note ("New note" in header, hint text) | partly: header yes, hint box no | `ui_editor` |
+| B1 | Ctrl+N: empty note ("New note" in header, hint text) | built to the mockup, host render only: "Start typing…" after the cursor, dashed hint box, footer "Ctrl+K Look up / Esc Discard empty note". Not italic: the font set has no italic. Shown only while the note is new and empty | `ui_editor` (`empty_new`) |
 | B2 | First line becomes the title | built | `ed_title`, header |
 | B3 | Editor with save states | built | `ui_editor`, `key_editor` |
 | B4 | Save failed banner | built (text generic, mockup says microSD) | `ui_editor`, `save_now` |

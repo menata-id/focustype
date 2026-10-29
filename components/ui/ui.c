@@ -127,6 +127,29 @@ static void triangle_right(int x, int y, int h, bool ink)
     }
 }
 
+/* 2 px dashes every 4 px; the 1 px dashed border of the mockup's hint boxes. */
+static void dashed_hline(int x, int y, int w, bool ink)
+{
+    for (int i = 0; i < w; i += 4) {
+        gfx_hline(x + i, y, w - i < 2 ? w - i : 2, ink);
+    }
+}
+
+static void dashed_vline(int x, int y, int h, bool ink)
+{
+    for (int i = 0; i < h; i += 4) {
+        gfx_vline(x, y + i, h - i < 2 ? h - i : 2, ink);
+    }
+}
+
+static void dashed_rect(int x, int y, int w, int h, bool ink)
+{
+    dashed_hline(x, y, w, ink);
+    dashed_hline(x, y + h - 1, w, ink);
+    dashed_vline(x, y, h, ink);
+    dashed_vline(x + w - 1, y, h, ink);
+}
+
 /* A small pennant on a pole, 9 x 11 px, top-left at (x, y). Replaces the unavailable flag glyph. */
 static void flag_icon(int x, int y, bool ink)
 {
@@ -550,6 +573,18 @@ void ui_editor(ed_t *e, const char *title, ui_save_t save, const char *saved_tim
         gfx_draw_text(&font_plex_mono_17, MARGIN_X, baseline(&font_plex_mono_17, y, ED_LINE_H), s, len, true);
     }
 
+    /* B1: a brand-new note shows a placeholder after the cursor and a hint box under it */
+    const bool empty_new = e->len == 0 && save == UI_SAVED && !(saved_time && saved_time[0]) && !banner;
+    if (empty_new) {
+        draw(&font_plex_mono_15, MARGIN_X + 2 + 6, ED_TEXT_Y, ED_LINE_H, "Start typing\xE2\x80\xA6", true);
+        const int bx = MARGIN_X, bw = GFX_W - MARGIN_X - 16, by = ED_TEXT_Y + ED_LINE_H + 10;
+        const int n = paragraph(&font_plex_sans_12, 0, 0, bw - 2 - 16, 16,
+                                "The first line becomes the title. You can rename it later in Details.", true, false);
+        dashed_rect(bx, by, bw, 2 + 12 + n * 16, true);
+        paragraph(&font_plex_sans_12, bx + 1 + 8, by + 1 + 6, bw - 2 - 16, 16,
+                  "The first line becomes the title. You can rename it later in Details.", true, true);
+    }
+
     /* cursor: a 2 px beam */
     const size_t cl = ed_cursor_line(e);
     if (cl >= e->top_line && cl < e->top_line + (size_t)lines) {
@@ -574,8 +609,11 @@ void ui_editor(ed_t *e, const char *title, ui_save_t save, const char *saved_tim
 
     static const hint_t hints[] = {{"Ctrl+S", "Save"}, {"Ctrl+K", "Look up"}, {"Esc", "Menu"}};
     static const hint_t hints_fail[] = {{"Ctrl+S", "Retry"}, {"Esc", "Keep writing"}};
+    static const hint_t hints_empty[] = {{"Ctrl+K", "Look up"}, {"Esc", "Discard empty note"}};
     if (save == UI_SAVE_FAILED) {
         footer(hints_fail, 2);
+    } else if (empty_new) {
+        footer(hints_empty, 2);
     } else {
         footer(hints, 3);
     }
@@ -713,13 +751,6 @@ void ui_preview(const char *title, const char *query, size_t pos, size_t total, 
 
 #define DT_LEFT_W  168
 #define DT_ITEM_H  31
-
-static void dashed_hline(int x, int y, int w, bool ink)
-{
-    for (int i = 0; i < w; i += 4) {
-        gfx_hline(x + i, y, w - i < 2 ? w - i : 2, ink);
-    }
-}
 
 void ui_details(const ui_detail_t *d, int sel)
 {

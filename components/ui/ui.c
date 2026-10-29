@@ -451,6 +451,56 @@ void ui_editor(ed_t *e, const char *title, ui_save_t save, const char *saved_tim
 
 /* ---- Keyboard not detected ------------------------------------------------------------- */
 
+/* ---- Set clock ------------------------------------------------------------------------- */
+
+void ui_clock(int year, int month, int day, int hour, int minute, int field, bool first_run)
+{
+    gfx_clear(false);
+    header(&font_plex_sans_13_bold, "Set clock", NULL, NULL);
+
+    const int x = 24, w = GFX_W - 2 * x;
+    int y = BODY_Y + 24;
+    const char *msg = first_run
+        ? "The clock has lost its time, so dates and times on your notes would be wrong. "
+          "Set it once; it keeps running while the device is off."
+        : "Move between the fields, change the value, then press Enter.";
+    y += paragraph(&font_plex_sans_13, x, y, w, 18, msg, true, true) * 18 + 24;
+
+    const gfx_font_t *f = &font_plex_mono_17_medium;
+    const int pad = 4, h = 28;
+    char parts[UI_CLOCK_FIELDS][8];
+    snprintf(parts[0], sizeof(parts[0]), "%04d", year);
+    snprintf(parts[1], sizeof(parts[1]), "%02d", month);
+    snprintf(parts[2], sizeof(parts[2]), "%02d", day);
+    snprintf(parts[3], sizeof(parts[3]), "%02d", hour);
+    snprintf(parts[4], sizeof(parts[4]), "%02d", minute);
+    static const char *const seps[UI_CLOCK_FIELDS] = {"-", "-", "   ", ":", ""};
+
+    int cx = x;
+    for (int i = 0; i < UI_CLOCK_FIELDS; i++) {
+        const int tw = text_w(f, parts[i]);
+        const bool sel = i == field;
+        if (sel) {
+            gfx_fill_rect(cx, y, tw + 2 * pad, h, true);
+        } else {
+            gfx_rect(cx, y, tw + 2 * pad, h, 1, true);
+        }
+        draw(f, cx + pad, y, h, parts[i], !sel);
+        cx += tw + 2 * pad;
+        draw(f, cx + 2, y, h, seps[i], true);
+        cx += text_w(f, seps[i]) + 4;
+    }
+    y += h + 10;
+    static const char *const names[UI_CLOCK_FIELDS] = {"Year", "Month", "Day", "Hour", "Minute"};
+    draw(&font_plex_sans_12, x, y, 14, names[field < 0 || field >= UI_CLOCK_FIELDS ? 0 : field], true);
+
+    static const hint_t hints[] = {{"\xE2\x86\x90\xE2\x86\x92", "Field"},
+                                   {"\xE2\x86\x91\xE2\x86\x93", "Change"},
+                                   {"Enter", "Set"},
+                                   {"Esc", "Cancel"}};
+    footer(hints, 4);
+}
+
 void ui_kbd_error(const char *saved_time)
 {
     gfx_clear(false);

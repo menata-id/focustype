@@ -20,6 +20,8 @@
 #include "editor.h"
 #include "gfx.h"
 #include "notes.h"
+#include "pcf85063.h"
+#include "pcf_regs.h"
 #include "st7305.h"
 #include "storage.h"
 #include "ui.h"
@@ -33,7 +35,7 @@ static const char *TAG = "app";
 #define KBD_WAIT_MS    5000
 #define NOTES_DIR      STORAGE_MOUNT_POINT "/notes"
 
-typedef enum { S_HOME, S_LIST, S_EDITOR, S_KBD_ERR } state_t;
+typedef enum { S_HOME, S_LIST, S_EDITOR, S_KBD_ERR, S_CLOCK } state_t;
 
 static struct {
     state_t state, prev_state;
@@ -49,6 +51,12 @@ static struct {
     ui_save_t save;
     time_t saved_at;
     int64_t last_edit_ms;
+
+    struct {
+        int v[UI_CLOCK_FIELDS];  /* year, month, day, hour, minute */
+        int field;
+        bool first_run;
+    } clk;
 
     bool kbd_seen;
     bool dirty_screen;
@@ -171,6 +179,100 @@ static void show_kbd_error(void)
     A.state = S_KBD_ERR;
 }
 
+/* ---- clock ----------------------------------------------------------------------------- */
+
+#define CLOCK_YEAR_MIN 2025
+#define CLOCK_YEAR_MAX 2099
+
+static int days_in_month(int year, int month)
+{
+    static const int dim[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    const bool leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+    return month == 2 && leap ? 29 : dim[month - 1];
+}
+
+/* Compile time, used to pre-fill the screen when the clock has never been set. */
+static time_t build_time(void)
+{
+    static const char *const mon = "JanFebMarAprMayJunJulAugSepOctNovDec";
+    char m[4] = {0};
+    int d = 1, y = CLOCK_YEAR_MIN, hh = 0, mm = 0;
+    sscanf(__DATE__, "%3s %d %d", m, &d, &y);
+    sscanf(__TIME__, "%d:%d", &hh, &mm);
+    const char *p = strstr(mon, m);
+    const int mo = p ? (int)(p - mon) / 3 + 1 : 1;
+    return pcf_civil_to_time(y, mo, d, hh, mm, 0);
+}
+
+static void open_clock(bool first_run)
+{
+    time_t t = time(NULL);
+    struct tm tm;
+    pcf_time_to_civil(t, &tm);
+    if (tm.tm_year + 1900 < CLOCK_YEAR_MIN) {
+        pcf_time_to_civil(build_time(), &tm);
+    }
+    A.clk.v[0] = tm.tm_year + 1900;
+    A.clk.v[1] = tm.tm_mon + 1;
+    A.clk.v[2] = tm.tm_mday;
+    A.clk.v[3] = tm.tm_hour;
+    A.clk.v[4] = tm.tm_min;
+    A.clk.field = 3;  /* the date is usually close; the hour is what drifts */
+    A.clk.first_run = first_run;
+    A.state = S_CLOCK;
+}
+
+static void clock_change(int delta)
+{
+    static const int lo[UI_CLOCK_FIELDS] = {CLOCK_YEAR_MIN, 1, 1, 0, 0};
+    int *v = A.clk.v;
+    const int f = A.clk.field;
+    int hi = f == 0 ? CLOCK_YEAR_MAX : f == 1 ? 12 : f == 2 ? days_in_month(v[0], v[1]) : f == 3 ? 23 : 59;
+    const int span = hi - lo[f] + 1;
+    v[f] = lo[f] + ((v[f] - lo[f] + delta) % span + span) % span;
+    if (v[2] > days_in_month(v[0], v[1])) {
+        v[2] = days_in_month(v[0], v[1]);
+    }
+}
+
+static void key_clock(const kbd_event_t *ev)
+{
+    switch (ev->key) {
+    case KBD_KEY_LEFT:
+        A.clk.field = (A.clk.field + UI_CLOCK_FIELDS - 1) % UI_CLOCK_FIELDS;
+        break;
+    case KBD_KEY_RIGHT:
+    case KBD_KEY_TAB:
+        A.clk.field = (A.clk.field + 1) % UI_CLOCK_FIELDS;
+        break;
+    case KBD_KEY_UP:
+        clock_change(1);
+        break;
+    case KBD_KEY_DOWN:
+        clock_change(-1);
+        break;
+    case KBD_KEY_PGUP:
+        clock_change(10);
+        break;
+    case KBD_KEY_PGDN:
+        clock_change(-10);
+        break;
+    case KBD_KEY_ENTER: {
+        const int *v = A.clk.v;
+        if (pcf_set(pcf_civil_to_time(v[0], v[1], v[2], v[3], v[4], 0)) != ESP_OK) {
+            ESP_LOGW(TAG, "clock set for this session only; the RTC chip did not accept it");
+        }
+        go_home();
+        break;
+    }
+    case KBD_KEY_ESC:
+        go_home();
+        break;
+    default:
+        break;
+    }
+}
+
 /* ---- rendering ------------------------------------------------------------------------- */
 
 static void render_home(void)
@@ -240,6 +342,10 @@ static void render(void)
         ui_kbd_error(when);
         break;
     }
+    case S_CLOCK:
+        ui_clock(A.clk.v[0], A.clk.v[1], A.clk.v[2], A.clk.v[3], A.clk.v[4], A.clk.field,
+                 A.clk.first_run);
+        break;
     }
     ui_present();
     A.dirty_screen = false;
@@ -257,6 +363,8 @@ static void key_home(const kbd_event_t *ev)
             refresh_notes();
             list_clamp();
             A.state = S_LIST;
+        } else if (ev->ch == 't') {
+            open_clock(false);
         }
         return;
     }
@@ -416,6 +524,9 @@ static void handle_key(const kbd_event_t *ev)
     case S_EDITOR:
         key_editor(ev);
         break;
+    case S_CLOCK:
+        key_clock(ev);
+        break;
     case S_KBD_ERR:
         break;  /* waits for the keyboard to come back */
     }
@@ -471,7 +582,12 @@ void app_run(void)
     ESP_ERROR_CHECK(usb_kbd_start());
 #endif
 
+    const esp_err_t rtc_err = pcf_init();
+
     go_home();
+    if (rtc_err != ESP_OK) {
+        open_clock(true);
+    }
     render();
 
     for (;;) {

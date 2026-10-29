@@ -53,7 +53,8 @@ it, the geometry and behaviour are recorded here and in `components/ui/ui.c`.
 
 | Context | Keys |
 |---|---|
-| Home | Up/Down select, Enter open, Ctrl+N new, Ctrl+O all writing |
+| Home | Up/Down select, Enter open, Ctrl+N new, Ctrl+O all writing, Ctrl+T set clock |
+| Set clock | Left/Right (or Tab) field, Up/Down change, PgUp/PgDn change by 10, Enter set, Esc cancel |
 | All writing | Up/Down, PgUp/PgDn, Enter open, Esc home |
 | Editor | typing, Enter, Backspace, Delete, arrows, Home/End, PgUp/PgDn, Ctrl+S save, Esc save-and-leave |
 | Save failed | Ctrl+S retry, Esc keep writing |

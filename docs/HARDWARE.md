@@ -49,7 +49,20 @@ FAQ; not yet verified on the board):**
 - Not stated anywhere I could read: whether USB-C charges the battery, and whether any pin on the
   headers carries 5 V. Still needs the schematic.
 
-**Unknown (not in any source consulted):** microSD pins, PWR button, battery charge/power-latch
+**RTC (PCF85063ATL, I2C address 0x51 on GPIO13/14, INT on GPIO15; schematic net `RTC_INT`):**
+- Registers used (from the Waveshare SensorLib): CTRL1 0x00 (bit 1 = 12/24 h, bit 5 = STOP), time
+  registers 0x04..0x0A in BCD, bit 7 of the seconds register = oscillator-stop flag (time invalid).
+- The chip has its own backup input, net `RTC_BAT`, on the PH1.0 header for a rechargeable cell.
+- **Tested 2026-10-29: with no RTC cell fitted the chip loses the time every time USB is unplugged**
+  (the app shows Set clock at each boot). So the RTC is not fed from the 18650/USB while the board is
+  off, or not at all with the switch off. Not tested with the 18650 fitted and the switch off, and not
+  tested with a cell fitted. To keep the time, fit a rechargeable PH1.0 RTC cell (check its voltage
+  and polarity against the Waveshare accessory page before buying; never a non-rechargeable CR cell).
+
+**microSD:** SDMMC 1-bit, CLK 38, CMD 21, D0 39, taken from Waveshare's `esp-idf/06_SD_Card` example
+(`sdcard_bsp.h` defaults). Not yet checked against the schematic. Mounting not yet confirmed.
+
+**Unknown (not in any source consulted):** PWR button, battery charge/power-latch
 control, whether VBUS can be sourced. Check the Waveshare schematic. Do not guess.
 
 ## ST7305 (Sitronix datasheet v0.2, 112 pages)

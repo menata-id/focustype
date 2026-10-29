@@ -40,6 +40,14 @@ the previous one is `sdkconfig.bak-before-usbhost`.
 Compiled means only that it compiles: the `usb_host_hid` calls, SPI behavior and all UI are unverified.
 Use `. ~/esp/esp-idf/export.sh` in each new shell.
 
+**2026-10-29 RTC.** `components/pcf85063` reads/writes the PCF85063 over I2C (`pcf_init` at boot sets the system
+clock; `pcf_set` writes the chip and the system clock). Register logic is in `pcf_regs.c` with host test
+`test_pcf`. The Set clock screen (`ui_clock`, state `S_CLOCK`) opens at boot if the chip lost its time, or
+with Ctrl+T on Home. Verified on the board: setting the time works. **The time is lost on every unplug
+because no RTC cell is fitted**, see `docs/HARDWARE.md`; this is hardware, not a bug. Until a cell is
+fitted, Set clock appears at each boot (Esc skips it, the system clock then stays at 1970). The component
+is named `pcf85063` because ESP-IDF already owns `rtc.h` and `rtc_init`.
+
 **2026-10-29 fixes.** Saving failed on every note because `CONFIG_FATFS_LFN_NONE` (8.3 names only) rejects the
 atomic-save temp file `ft-0001.txt.tmp`. `sdkconfig.defaults` now sets `CONFIG_FATFS_LFN_HEAP=y`; verified on the
 board. The microSD was not detected because `FT_SD_PIN_*` were `-1`; they are now set from the Waveshare example.
@@ -86,8 +94,8 @@ Next: pick a BLE keyboard (the user has none yet, only a wired USB one), then bu
    (see `kbd_hid.c`, already host-tested), and a battery-draw check. Needs a US-layout keyboard that
    advertises BLE (not "Bluetooth 3.0", not a dongle-only one). Not started; the user has no such
    keyboard yet. Then drop `sdkconfig.usbhost` and bring USB Serial/JTAG logging back.
-4. SD card, then PWR/KEY buttons, battery ADC (GPIO4, show "Not calibrated" until verified), RTC
-   (PCF85063 on I2C 13/14). Without an RTC the times on screen are wrong.
+4. Confirm the SD card mounts, then PWR/KEY buttons and battery ADC (GPIO4, show "Not calibrated" until
+   verified). RTC is done in software; it needs a backup cell to keep the time (see above).
 5. Remaining screens and features, see `docs/DESIGN.md` (Search, preview, Details, Rename,
    recovery on boot, Device status).
 6. Low-power mode: only the HPM/LPM command is sent; the datasheet's voltage re-setting sequence

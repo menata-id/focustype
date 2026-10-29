@@ -52,6 +52,11 @@ void ui_editor(ed_t *e, const char *title, ui_save_t save, const char *saved_tim
 /* "Keyboard not detected" (F2). */
 void ui_kbd_error(const char *saved_time);
 
+/* Set clock. Fields: 0 year, 1 month, 2 day, 3 hour, 4 minute; `field` is the highlighted one.
+ * `first_run` shows the "clock lost its time" explanation instead of the plain hint. */
+#define UI_CLOCK_FIELDS 5
+void ui_clock(int year, int month, int day, int hour, int minute, int field, bool first_run);
+
 esp_err_t ui_present(void);
 
 /* Text helpers (ui_format.c, no display dependency) */

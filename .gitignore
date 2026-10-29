@@ -9,3 +9,4 @@ tests/host/test_editor
 tests/host/test_notes
 tests/host/test_format
 sdkconfig.bak*
+tests/host/test_pcf

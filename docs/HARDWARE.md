@@ -76,6 +76,17 @@ board charges the cell. This matches the schematic reading above. The FAQ calls 
 the schematic shows a 2-pin SH1.0 connector, so a bare ML1220 may need a lead or adapter; check the real
 connector before buying.
 
+**RTC connector polarity, from the Waveshare product photo (`ESP32-S3-RLCD-4.2-HW`, item 10, 2026-10-29):** the
+silkscreen next to the 2-pin connector labelled "RTC" shows **"+" on the left pin and "-" on the right pin**, in the
+photo orientation (TF card slot at the top left, 18650 holder at the bottom, "RTC" text under the connector). It is a
+small white 2-pin connector, visibly smaller than the 3-pin "SPK" one beside it, consistent with 1.0 mm pitch. This is
+a product photo, not checked on the user's board; confirm the "+" mark on the real PCB before plugging in a cell.
+
+**Header silkscreen (same photo, item 11):** the 2x9 header is labelled 3V3, GND, GP0, GP1, GP2, GP3, GP17, GP18 on
+one row and VBUS, GND, GP19, GP20, TXD, RXD, SDA, SCL (and more) on the other. So the header has a pin labelled
+**VBUS** and the native USB pins GP19/GP20. Not tested electrically: whether VBUS is the 5 V from the USB-C port
+(it would feed a keyboard when USB-C is plugged into a charger, but the board's own port is the one used as host).
+
 **microSD:** SDMMC 1-bit, CLK 38, CMD 21, D0 39, taken from Waveshare's `esp-idf/06_SD_Card` example
 (`sdcard_bsp.h` defaults). Not yet checked against the schematic. Mounting not yet confirmed.
 

@@ -158,10 +158,11 @@ int notes_list(note_info_t *out, size_t max, size_t *count)
     return 0;
 }
 
-static bool contains_nocase(const char *text, size_t len, const char *needle, size_t nlen)
+/* Offset of the first case-insensitive match, or (size_t)-1. */
+static size_t find_nocase(const char *text, size_t len, const char *needle, size_t nlen)
 {
     if (nlen == 0 || nlen > len) {
-        return false;
+        return (size_t)-1;
     }
     for (size_t i = 0; i + nlen <= len; i++) {
         size_t j = 0;
@@ -169,13 +170,61 @@ static bool contains_nocase(const char *text, size_t len, const char *needle, si
             j++;
         }
         if (j == nlen) {
-            return true;
+            return i;
         }
     }
-    return false;
+    return (size_t)-1;
 }
 
-int notes_search(const char *query, note_info_t *out, size_t max, size_t *count)
+#define SNIPPET_BEFORE 24
+#define SNIPPET_AFTER  48
+#define ELLIPSIS       "\xE2\x80\xA6"
+
+static bool utf8_cont(unsigned char c)
+{
+    return (c & 0xC0) == 0x80;
+}
+
+/* Copies the text around [pos, pos+qlen) without cutting a UTF-8 character, with "…" where text was cut. */
+static void make_snippet(const char *text, size_t len, size_t pos, size_t qlen, note_hit_t *hit)
+{
+    size_t start = pos > SNIPPET_BEFORE ? pos - SNIPPET_BEFORE : 0;
+    while (start < pos && utf8_cont((unsigned char)text[start])) {
+        start++;
+    }
+    size_t end = pos + qlen + SNIPPET_AFTER;
+    if (end > len) {
+        end = len;
+    }
+    while (end > pos + qlen && end < len && utf8_cont((unsigned char)text[end])) {
+        end--;
+    }
+
+    size_t o = 0;
+    char *out = hit->snippet;
+    if (start > 0) {
+        memcpy(out, ELLIPSIS, 3);
+        o = 3;
+    }
+    hit->hl_off = (uint8_t)(o + (pos - start));
+    hit->hl_len = (uint8_t)qlen;
+    for (size_t i = start; i < end && o + 4 < NOTE_SNIPPET_LEN; i++) {
+        const char c = text[i];
+        out[o++] = (c == '\n' || c == '\r' || c == '\t') ? ' ' : c;
+    }
+    if (end < len) {
+        memcpy(out + o, ELLIPSIS, 3);
+        o += 3;
+    }
+    out[o] = '\0';
+}
+
+static int hit_newer_first(const void *a, const void *b)
+{
+    return newer_first(&((const note_hit_t *)a)->info, &((const note_hit_t *)b)->info);
+}
+
+int notes_search(const char *query, note_hit_t *out, size_t max, size_t *count)
 {
     static char ids[MAX_IDS][NOTE_ID_LEN];
     *count = 0;
@@ -194,13 +243,14 @@ int notes_search(const char *query, note_info_t *out, size_t max, size_t *count)
         if (notes_load(ids[i], &text, &len) != 0) {
             continue;
         }
-        const bool hit = contains_nocase(text, len, query, qlen);
-        free(text);
-        if (hit && fill_info(ids[i], &out[k]) == 0) {
+        const size_t pos = find_nocase(text, len, query, qlen);
+        if (pos != (size_t)-1 && fill_info(ids[i], &out[k].info) == 0) {
+            make_snippet(text, len, pos, qlen, &out[k]);
             k++;
         }
+        free(text);
     }
-    qsort(out, k, sizeof(out[0]), newer_first);
+    qsort(out, k, sizeof(out[0]), hit_newer_first);
     *count = k;
     return 0;
 }

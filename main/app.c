@@ -57,7 +57,7 @@ static struct {
     struct {
         char q[QUERY_MAX];
         size_t qlen;
-        note_info_t res[MAX_NOTES];
+        note_hit_t res[MAX_NOTES];
         size_t n, sel, top;
         bool pending;        /* the query changed and the results are stale */
         int64_t last_key_ms;
@@ -254,7 +254,7 @@ static void key_search(const kbd_event_t *ev)
             run_search();
         }
         if (A.search.n > 0) {
-            open_note(A.search.res[A.search.sel].id, false);
+            open_note(A.search.res[A.search.sel].info.id, false);
         }
         return;
     case KBD_KEY_ESC:
@@ -401,14 +401,17 @@ static void render_list(void)
 
 static void render_search(void)
 {
-    static ui_row_t rows[MAX_NOTES];
+    static ui_hit_t hits[MAX_NOTES];
     const time_t now = time(NULL);
     for (size_t i = 0; i < A.search.n; i++) {
-        snprintf(rows[i].title, sizeof(rows[i].title), "%s", A.search.res[i].title);
-        ui_format_when(A.search.res[i].mtime, now, rows[i].when, sizeof(rows[i].when));
-        ui_format_words(A.search.res[i].words, rows[i].sub, sizeof(rows[i].sub));
+        const note_hit_t *h = &A.search.res[i];
+        snprintf(hits[i].title, sizeof(hits[i].title), "%s", h->info.title);
+        ui_format_when(h->info.mtime, now, hits[i].when, sizeof(hits[i].when));
+        snprintf(hits[i].snippet, sizeof(hits[i].snippet), "%s", h->snippet);
+        hits[i].hl_off = h->hl_off;
+        hits[i].hl_len = h->hl_len;
     }
-    ui_search(A.search.q, rows, A.search.n, A.search.sel, A.search.top);
+    ui_search(A.search.q, hits, A.search.n, A.search.sel, A.search.top);
 }
 
 static void render_editor(void)

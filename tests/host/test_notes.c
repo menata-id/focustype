@@ -89,11 +89,34 @@ int main(void)
     free(text);
 
     /* search: whole text, any letter case; empty or unmatched queries find nothing */
-    CHECK(notes_search("THREE Words", list, 8, &n) == 0 && n == 1 && strcmp(list[0].id, "ft-0002") == 0);
-    CHECK(notes_search("recovered", list, 8, &n) == 0 && n == 1 && strcmp(list[0].id, "ft-0007") == 0);
-    CHECK(notes_search("re", list, 8, &n) == 0 && n == 3);  /* Replaced, three, Recovered */
-    CHECK(notes_search("", list, 8, &n) == 0 && n == 0);
-    CHECK(notes_search("zzz", list, 8, &n) == 0 && n == 0);
+    note_hit_t hits[8];
+    CHECK(notes_search("THREE Words", hits, 8, &n) == 0 && n == 1 && strcmp(hits[0].info.id, "ft-0002") == 0);
+    CHECK(notes_search("recovered", hits, 8, &n) == 0 && n == 1 && strcmp(hits[0].info.id, "ft-0007") == 0);
+    CHECK(notes_search("re", hits, 8, &n) == 0 && n == 3);  /* Replaced, three, Recovered */
+    CHECK(notes_search("", hits, 8, &n) == 0 && n == 0);
+    CHECK(notes_search("zzz", hits, 8, &n) == 0 && n == 0);
+
+    /* short text: no ellipsis, newline becomes a space, the highlight points at the match */
+    CHECK(notes_search("three", hits, 8, &n) == 0 && n == 1);
+    CHECK(strcmp(hits[0].snippet, "  Second note   with three words") == 0);
+    CHECK(hits[0].hl_len == 5 && strncmp(hits[0].snippet + hits[0].hl_off, "three", 5) == 0);
+
+    /* long text: both ends cut with an ellipsis, and a cut never lands inside a UTF-8 character */
+    char longtext[400];
+    size_t lo = 0;
+    for (int i = 0; i < 40; i++) {
+        longtext[lo++] = (char)0xC3;  /* "é" */
+        longtext[lo++] = (char)0xA9;
+    }
+    lo += (size_t)snprintf(longtext + lo, sizeof(longtext) - lo, " a Needle here %s", "and a long tail that keeps going on and on and on and on and on");
+    CHECK(notes_save("ft-0009", longtext, lo) == 0);
+    CHECK(notes_search("NEEDLE", hits, 8, &n) == 0 && n == 1);
+    const char *sn = hits[0].snippet;
+    CHECK(strncmp(sn, "\xE2\x80\xA6", 3) == 0);
+    CHECK(((unsigned char)sn[3] & 0xC0) != 0x80);
+    CHECK(strlen(sn) > 6 && strcmp(sn + strlen(sn) - 3, "\xE2\x80\xA6") == 0);
+    CHECK(hits[0].hl_len == 6 && strncasecmp(sn + hits[0].hl_off, "Needle", 6) == 0);
+    CHECK(notes_remove("ft-0009") == 0);
 
     /* remove */
     CHECK(notes_remove(id2) == 0);

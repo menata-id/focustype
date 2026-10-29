@@ -36,6 +36,15 @@ int notes_save(const char *id, const char *text, size_t len);
 
 int notes_remove(const char *id);
 
-/* Notes whose text contains `query`, newest first. The match ignores ASCII letter case and
- * looks at the whole text, not just the title. An empty query matches nothing. */
-int notes_search(const char *query, note_info_t *out, size_t max, size_t *count);
+#define NOTE_SNIPPET_LEN 112
+
+typedef struct {
+    note_info_t info;
+    char snippet[NOTE_SNIPPET_LEN];  /* "…text around the match…", newlines turned into spaces */
+    uint8_t hl_off, hl_len;          /* the matched bytes inside snippet */
+} note_hit_t;
+
+/* Notes whose text contains `query`, newest first, each with a short snippet around the first match.
+ * The match ignores ASCII letter case and looks at the whole text, not just the title. An empty
+ * query matches nothing. */
+int notes_search(const char *query, note_hit_t *out, size_t max, size_t *count);

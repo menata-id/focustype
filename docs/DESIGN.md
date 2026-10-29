@@ -26,7 +26,7 @@ it, the geometry and behaviour are recorded here and in `components/ui/ui.c`.
 | B2 | First line becomes the title | built | `ed_title`, header |
 | B3 | Editor with save states | built | `ui_editor`, `key_editor` |
 | B4 | Save failed banner | built (text generic, mockup says microSD) | `ui_editor`, `save_now` |
-| C1 | Search from Home | built, not yet seen on the board (full text, ASCII case-insensitive, no highlight of the match) | `ui_search`, `key_search`, `notes_search` |
+| C1 | Search from Home | built to the mockup (Find label, 5 rows with a snippet and the match bold and underlined); rendered on the host only, not yet seen on the board. Full text, ASCII case-insensitive. Status before the date ("Draft ·") is missing: needs metadata | `ui_search`, `key_search`, `notes_search` |
 | C2 | All writing | built (no Details yet) | `ui_list`, `key_list` |
 | D1 | Ctrl+K inside a note | not built | |
 | D2 | Read-only preview, Ctrl+Enter inserts a reference | not built | |

@@ -43,7 +43,9 @@ Use `. ~/esp/esp-idf/export.sh` in each new shell.
 **2026-10-29 Search.** Home > Search (or Ctrl+K) opens a query box; `notes_search` scans every note's full text
 (ASCII case-insensitive; UTF-8 letters match only exactly) 250 ms after the last keystroke. Host-tested
 (`test_notes`); compiled; **not yet seen on the board**. Scans up to 64 results from up to 256 files, so it
-may feel slow on a large SD card. No snippet or match highlight yet.
+may feel slow on a large SD card. Each hit shows a snippet around the first match with the match bold and underlined, as in the mockup
+(`note_hit_t`, snippet logic host-tested incl. UTF-8 cuts). The screen was also rendered on the host and viewed as an
+image, but not on the panel.
 
 **2026-10-29 RTC.** `components/pcf85063` reads/writes the PCF85063 over I2C (`pcf_init` at boot sets the system
 clock; `pcf_set` writes the chip and the system clock). Register logic is in `pcf_regs.c` with host test

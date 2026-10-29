@@ -351,36 +351,92 @@ void ui_list(const ui_row_t *rows, size_t n, size_t sel, size_t top)
 
 /* ---- Search ---------------------------------------------------------------------------- */
 
-#define SEARCH_BOX_H 30
+#define SEARCH_FIND_Y   (BODY_Y + 6)   /* top of the query box */
+#define SEARCH_FIND_H   26
+#define SEARCH_ROWS_Y   (BODY_Y + 6 + SEARCH_FIND_H + 6)
+#define SEARCH_ROW_H    41
 
-void ui_search(const char *query, const ui_row_t *rows, size_t n, size_t sel, size_t top)
+/* One line of text with the matched bytes in semibold and underlined, cut with an ellipsis at max_w. */
+static void snippet_line(const ui_hit_t *h, int x, int y_top, int max_w, bool ink)
+{
+    const gfx_font_t *rf = &font_plex_sans_12, *mf = &font_plex_sans_12_semibold;
+    const size_t len = strlen(h->snippet);
+    const size_t off = h->hl_off <= len ? h->hl_off : len;
+    const size_t mlen = off + h->hl_len <= len ? h->hl_len : len - off;
+    char buf[NOTE_SNIPPET_LEN_UI];
+
+    memcpy(buf, h->snippet, off);
+    buf[off] = '\0';
+    char cut[NOTE_SNIPPET_LEN_UI];
+    fit(rf, buf, max_w, cut, sizeof(cut));
+    int used = draw(rf, x, y_top, 15, cut, ink);
+
+    memcpy(buf, h->snippet + off, mlen);
+    buf[mlen] = '\0';
+    if (mlen > 0 && used < max_w) {
+        const int mw = draw(mf, x + used, y_top, 15, buf, ink);
+        gfx_hline(x + used, baseline(mf, y_top, 15) + 2, mw, ink);
+        used += mw;
+    }
+    if (off + mlen < len && used < max_w) {
+        fit(rf, h->snippet + off + mlen, max_w - used, cut, sizeof(cut));
+        draw(rf, x + used, y_top, 15, cut, ink);
+    }
+}
+
+void ui_search(const char *query, const ui_hit_t *hits, size_t n, size_t sel, size_t top)
 {
     gfx_clear(false);
     char right[32] = "";
     if (query[0]) {
-        snprintf(right, sizeof(right), "%lu found", (unsigned long)n);
+        snprintf(right, sizeof(right), "%lu %s", (unsigned long)n, n == 1 ? "result" : "results");
     }
     header(&font_plex_sans_13_bold, "Search", &font_plex_sans_13, right[0] ? right : NULL);
 
-    /* query box with a caret */
-    const int bx = MARGIN_X, by = BODY_Y + 4, bw = GFX_W - 2 * MARGIN_X;
-    gfx_rect(bx, by, bw, SEARCH_BOX_H - 4, 2, true);
+    /* "Find" label and the query box with a beam caret */
+    const gfx_font_t *lf = &font_plex_sans_12_semibold;
+    const int lw = draw(lf, MARGIN_X, SEARCH_FIND_Y, SEARCH_FIND_H, "Find", true);
+    const int bx = MARGIN_X + lw + 8, bw = GFX_W - MARGIN_X - bx;
+    gfx_rect(bx, SEARCH_FIND_Y, bw, SEARCH_FIND_H, 3, true);
     char shown[64];
-    fit(&font_plex_mono_17, query, bw - 24, shown, sizeof(shown));
-    const int tx = bx + 8;
-    const int w = draw(&font_plex_mono_17, tx, by, SEARCH_BOX_H - 4, shown, true);
-    gfx_fill_rect(tx + w + 1, by + 5, 2, SEARCH_BOX_H - 4 - 10, true);
+    fit(&font_plex_mono_15, query, bw - 6 - 6 - 4, shown, sizeof(shown));
+    const int tw = draw(&font_plex_mono_15, bx + 6, SEARCH_FIND_Y, SEARCH_FIND_H, shown, true);
+    gfx_fill_rect(bx + 6 + tw + 1, SEARCH_FIND_Y + 6, 2, SEARCH_FIND_H - 12, true);
 
-    const int y0 = BODY_Y + SEARCH_BOX_H + 6;
     if (query[0] == '\0') {
-        draw(&font_plex_sans_12, MARGIN_X, y0 + 6, 15, "Type to search the full text of your writing.", true);
+        draw(&font_plex_sans_12, MARGIN_X, SEARCH_ROWS_Y + 8, 15,
+             "Type to search the full text of your writing.", true);
     } else if (n == 0) {
-        draw(&font_plex_sans_15_semibold, MARGIN_X, y0 + 6, 19, "Nothing found", true);
-    } else {
-        list_rows(rows, n, sel, top, y0, UI_SEARCH_PAGE);
+        draw(&font_plex_sans_15_semibold, MARGIN_X, SEARCH_ROWS_Y + 8, 19, "Nothing found", true);
     }
 
-    static const hint_t hints[] = {{"\xE2\x86\x91\xE2\x86\x93", "Select"}, {"Enter", "Open"}, {"Esc", "Home"}};
+    for (size_t i = top, row = 0; i < n && row < UI_SEARCH_PAGE; i++, row++) {
+        const int y = SEARCH_ROWS_Y + (int)row * SEARCH_ROW_H;
+        const bool selected = i == sel;
+        if (selected) {
+            gfx_fill_rect(0, y, GFX_W, SEARCH_ROW_H, true);
+        } else {
+            if (row == 0) {
+                gfx_hline(0, y, GFX_W, true);
+            }
+            gfx_hline(0, y + SEARCH_ROW_H - 1, GFX_W, true);
+        }
+        const bool ink = !selected;
+        const int when_w = text_w(&font_plex_sans_12, hits[i].when);
+        int tx = MARGIN_X;
+        if (selected) {
+            triangle_right(tx, y + 4 + (18 - 10) / 2, 10, false);
+            tx += 14;
+        }
+        char title[64];
+        fit(&font_plex_sans_15_bold, hits[i].title, GFX_W - tx - MARGIN_X - when_w - 8, title,
+            sizeof(title));
+        draw(&font_plex_sans_15_bold, tx, y + 4, 18, title, ink);
+        draw_right(&font_plex_sans_12, GFX_W - MARGIN_X, y + 4, 18, hits[i].when, ink);
+        snippet_line(&hits[i], MARGIN_X, y + 4 + 18, GFX_W - 2 * MARGIN_X, ink);
+    }
+
+    static const hint_t hints[] = {{"\xE2\x86\x91\xE2\x86\x93", "Select"}, {"Enter", "Open to edit"}, {"Esc", "Home"}};
     footer(hints, 3);
 }
 

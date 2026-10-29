@@ -18,7 +18,8 @@
 #define UI_EDITOR_LINES         11    /* visible text lines */
 #define UI_EDITOR_LINES_BANNER  7     /* visible lines while an error banner is shown */
 #define UI_LIST_PAGE            5     /* rows moved by PgUp/PgDn on the list */
-#define UI_SEARCH_PAGE          4     /* result rows visible under the search box */
+#define UI_SEARCH_PAGE          5     /* result rows visible under the search box */
+#define NOTE_SNIPPET_LEN_UI     112   /* size of ui_hit_t.snippet; same as NOTE_SNIPPET_LEN in notes.h */
 
 typedef struct {
     char title[64];
@@ -45,9 +46,16 @@ void ui_home(int sel, bool has_continue, const char *cont_title, const char *con
  * visible row. n is also shown in the header. */
 void ui_list(const ui_row_t *rows, size_t n, size_t sel, size_t top);
 
-/* Search. `query` is shown in the box; `rows` holds the n matches (highlighted row `sel`, first
+typedef struct {
+    char title[64];
+    char when[16];
+    char snippet[NOTE_SNIPPET_LEN_UI];  /* text around the match */
+    uint8_t hl_off, hl_len;             /* matched bytes inside snippet, drawn bold and underlined */
+} ui_hit_t;
+
+/* Search. `query` is shown in the box; `hits` holds the n matches (highlighted row `sel`, first
  * visible row `top`). With an empty query a hint is shown instead of results. */
-void ui_search(const char *query, const ui_row_t *rows, size_t n, size_t sel, size_t top);
+void ui_search(const char *query, const ui_hit_t *hits, size_t n, size_t sel, size_t top);
 
 /* Editor. saved_time is shown after "Saved"; if it is NULL or empty the header says "New note". Pass banner_head/banner_text (or NULL) to show
  * an error banner above the footer; then only UI_EDITOR_LINES_BANNER lines are visible. */

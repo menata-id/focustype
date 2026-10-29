@@ -18,7 +18,9 @@ mirrored in `components/board/include/board.h`.
 | 8 / 9 / 10 / 16 / 45 | I2S DOUT / BCLK / DIN / MCLK / LRCLK |
 | 11 | LCD SPI CLK |
 | 12 | LCD SPI MOSI |
-| 13 / 14 | I2C SDA / SCL |
+| 13 / 14 | I2C SDA / SCL (PCF85063 RTC at 0x51) |
+| 15 | RTC INT (schematic net `RTC_INT`, not used) |
+| 21 / 38 / 39 | microSD CMD / CLK / D0 (SDMMC 1-bit; from Waveshare's `06_SD_Card` example, works with a card at boot, not yet checked against the schematic) |
 | 18 | KEY button (active low) |
 | 40 | LCD CS |
 | 41 | LCD RESET |
@@ -136,15 +138,16 @@ From the Waveshare reference driver as ported in
 "Wi-Fi & BLE". 8 MB octal PSRAM and 16 MB flash were confirmed in the boot log. ESP-IDF v5.5 here has
 `examples/bluetooth/esp_hid_host` (BLE HID host).
 
-## USB host and the keyboard (superseded: BLE is the plan)
+## USB host and the keyboard
 
-The USB keyboard path was tested and the board's USB-C does not give the keyboard 5 V (details under
-"Battery and power" above). The notes below are kept for reference.
+**2026-10-29: it works.** A mechanical USB keyboard through an OTG adapter that has its own 5 V input is detected and
+types. The board's USB-C alone still does not give the keyboard 5 V (details under "Battery and power" above), so this
+setup needs external power and is not portable; BLE stays the plan for a portable device (`docs/HANDOFF.md`).
 
 - ESP32-S3 USB OTG (datasheet ESP32-S3 p. 4) can act as a full-speed host. ESP-IDF provides the
   `usb` host stack; HID comes from the managed component `espressif/usb_host_hid`.
-- **VBUS:** a keyboard needs 5 V. Whether this board's USB-C port can source it is unconfirmed. If not,
-  use a powered OTG adapter/hub or feed 5 V separately.
+- **VBUS:** a keyboard needs 5 V. This board's USB-C port does not source it (tested), so a powered OTG adapter is used.
+  The header silkscreen shows a VBUS pin (see above); untested.
 - **One port, two jobs:** the same native USB pins are used for flashing/logging (USB Serial/JTAG)
   and as the host. While hosting, flash with the BOOT button (rightmost) held while plugging in USB (or over UART0) and read logs on
   UART0 (`sdkconfig.usbhost`).

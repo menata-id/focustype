@@ -26,13 +26,14 @@ it, the geometry and behaviour are recorded here and in `components/ui/ui.c`.
 | B2 | First line becomes the title | built | `ed_title`, header |
 | B3 | Editor with save states | built | `ui_editor`, `key_editor` |
 | B4 | Save failed banner | built (text generic, mockup says microSD) | `ui_editor`, `save_now` |
-| C1 | Search from Home | built to the mockup (Find label, 5 rows with a snippet and the match bold and underlined); rendered on the host only, not yet seen on the board. Full text, ASCII case-insensitive. Status before the date ("Draft ·") is missing: needs metadata | `ui_search`, `key_search`, `notes_search` |
-| C2 | All writing | built (no Details yet) | `ui_list`, `key_list` |
+| C1 | Search from Home | built to the mockup (Find label, 5 rows with a snippet and the match bold and underlined, "Status · date" or a flag shape); host render only. Full text, ASCII case-insensitive. Right on a result opens its Details (not in the mockup; it is how an archived note is unarchived) | `ui_search`, `key_search`, `notes_search` |
+| C2 | All writing | built and seen on the board; rows now show "Status · #tags · words" or a flag shape (host render). Details opens with Right | `ui_list`, `key_list` |
 | D1 | Ctrl+K inside a note | built to the mockup (panel over the dimmed draft); rendered on the host only, not yet seen on the panel | `ui_dim`, `ui_lookup`, `key_lookup` |
-| D2 | Read-only preview, Ctrl+Enter inserts a reference | built to the mockup; rendered on the host only. The mockup does not say what a reference looks like: it inserts `[[Title]]` at the cursor (my choice). The created date in the info line is missing (no metadata): it shows `edited <date> · N words` | `ui_preview`, `key_preview`, `insert_reference` |
+| D2 | Read-only preview, Ctrl+Enter inserts a reference | built to the mockup; rendered on the host only. The mockup does not say what a reference looks like: it inserts `[[Title]]` at the cursor (my choice). The info line shows `edited <date> · N words`; the mockup's created date is not used there | `ui_preview`, `key_preview`, `insert_reference` |
 | E1 | Details & actions | built to the mockup, rendered on the host only, not yet seen on the panel. Open with Right on a row of All writing (or on a Search result). Sub-screens the mockup does not draw are my own design, built from the Rename panel style: Change status (pick one of Draft, Developing, Revising, Done), Tags & category (two fields), Archive/Unarchive confirmation, Export message | `ui_details`, `ui_panel_*`, `key_detail` |
 | E2 | Rename (title is metadata only, text never changes) | built to the mockup (panel over the dimmed Details), host render only | `ui_panel_form`, `key_detail` |
-| F1 | Device status (battery shows "Not calibrated" until verified) | not built | needs ADC, RTC |
+| F1 | Device status (battery shows "Not calibrated" until verified) | not built. Rows: Keyboard, microSD, Battery, Date & time, Autosave, Firmware. Not in the mockup: how to open it | needs ADC |
+| - | Set clock (not in the mockup; stands in for F1's Date & time until F1 exists) | built and used on the board | `ui_clock`, `key_clock` |
 | F2 | Keyboard not detected | built | `ui_kbd_error` |
 
 ## Behaviour rules from the mockup notes

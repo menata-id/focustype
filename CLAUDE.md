@@ -5,17 +5,21 @@ reflective LCD + USB keyboard + notes as files. Start with `docs/HANDOFF.md` (st
 blockers), then `docs/ARCHITECTURE.md` and `docs/HARDWARE.md`.
 
 ## State in one paragraph
-The code was written without a compiler or the hardware. It now builds (2026-10-27) but **it has been flashed
-and seen on the panel (2026-10-27: test pattern orientation correct; the app boots and its first screen renders correctly; keyboard and other screens are untested).** Treat every file as a careful first draft. The next job is
-a BLE keyboard (the USB keyboard was tried and the board's USB-C gives no 5 V; see `docs/HANDOFF.md`), then checking the other screens. Not new features. Source ESP-IDF with `. ~/esp/esp-idf/export.sh`.
+The code builds and runs on the board. **Run on the board (2026-10-29): panel, Home, All writing, the editor, saving, the
+USB keyboard (through a powered OTG adapter), the microSD at boot, and the RTC time setting. Built and only host-checked (rendered
+on the host, never seen on the panel): Search, Look up, Preview, Details, Rename and its panels, the empty-note hint.** Say which
+of the two a thing is; never call a host-only screen "working". Remaining from the mockup: Device status and the recovery draft.
+Known gaps (SD hot-swap, RTC needs a backup cell) are in `docs/HANDOFF.md`. The mockup (Claude Design artifact
+`T8zGCdmbkZBKXvRYoEt3x9`, readable with the Artifact tool) is the source of truth for screens; list every choice the mockup does
+not make. Source ESP-IDF with `. ~/esp/esp-idf/export.sh` (its Python venv has no Pillow; use `/usr/bin/python3 -I` for that).
 
 ## Conventions
 - C11, ESP-IDF 5.x components under `components/`, app in `main/`. 4-space indent, no tabs.
 - Code, comments, docs and commit messages in English. The user writes in Indonesian; answer them in
   Indonesian.
 - Keep logic that does not need the hardware free of ESP-IDF headers so it runs in `tests/host`
-  (`editor`, `notes`, `fsutil`, `util`, `usb_kbd/kbd_hid.c`, `st7305/st7305_pack.c`,
-  `ui/ui_format.c`).
+  (`editor`, `notes` incl. `note_meta.c`, `fsutil`, `util`, `usb_kbd/kbd_hid.c`, `st7305/st7305_pack.c`,
+  `pcf85063/pcf_regs.c`, `ui/ui_format.c`).
 - Do not hand-edit `components/gfx/fonts_generated.c` or `include/gfx_fonts.h`; run
   `python3 -I tools/gen_fonts.py` (needs Pillow).
 - Pixel convention everywhere: framebuffer bit 1 = ink (black). The panel packer inverts it.

@@ -1,158 +1,127 @@
 # Handoff
 
-Last updated: 2026-10-29 (USB keyboard works with a powered OTG adapter; saving notes verified; SD pins from the Waveshare example, untested). Read this first.
+Last updated: 2026-10-29. Read this first.
 
 ## 1. Where things stand
 
-| Area | Written | Compiled | Run on hardware | Checked another way |
-|---|---|---|---|---|
-| ST7305 driver (`components/st7305`) | yes | yes | no | pixel packer matches the reference LUT (Python port) |
-| Framebuffer, drawing, text (`components/gfx`) | yes | yes | no | font output previewed as an image |
-| Fonts (`tools/gen_fonts.py`) | yes | n/a | no | rendered preview looked right |
-| Editor core (`components/editor`) | yes | yes | no | wrap/cursor logic ported to Python against the test expectations |
-| Notes store, atomic save (`notes`, `fsutil`) | yes | yes | yes (2026-10-29: typed text saves and survives reset, on internal flash) | host test passes |
-| USB keyboard (`components/usb_kbd`) | yes | yes | yes (2026-10-29: mechanical keyboard through a powered OTG adapter is detected and types) | host test passes |
-| Storage mount (`components/storage`) | yes | yes | flash fallback yes; microSD not confirmed | SD pins 38/21/39 (1-bit SDMMC) from Waveshare `esp-idf/06_SD_Card`, not yet checked against the schematic |
-| Screens (`components/ui`) | 4 of 14 | yes | no | none, never rendered |
-| App state machine (`main/app.c`) | yes | yes | no | none |
+The firmware builds with ESP-IDF v5.5 (esp32s3) with no warnings, and `make -C tests/host` passes all seven
+host tests. It runs on the real board. "Run on the board" below means the user flashed it and used it; "host only"
+means it compiles, its logic is host-tested and its screen was rendered on the host and looked at as an image, but
+nobody has seen it on the panel yet. Never call a host-only item "working".
 
-The first sessions had no toolchain. On 2026-10-27 the machine got the apt packages, ESP-IDF v5.5
-(`~/esp/esp-idf`, shallow clone, installed with the system Python 3.14, which worked) and
-`make -C tests/host` passes all five tests. `idf.py set-target esp32s3 && idf.py build` succeeds with
-no warnings (`focustype.bin` about 340 KB of the 3 MB partition). The only compile error was a missing
-`PRIV_REQUIRES esp_timer` in `main/CMakeLists.txt`, now fixed. **First flash done on a real board (/dev/ttyACM0):** the test pattern shows three corner squares
-(24 px top-left, 12 px top-right, 6 px bottom-left), so the panel works and landscape 400x300 needs no
-rotation or MADCTL change. This also verified the init sequence, address windows and packer on hardware.
-A bug found and fixed on the way: `SPI_TRANS_CS_KEEP_ACTIVE` returns `ESP_ERR_INVALID_ARG` unless the bus
-is held with `spi_device_acquire_bus()`; `st7305_flush` now does that. The full app (`FT_APP` on) was also flashed: it boots, mounts internal flash FAT at `/data`
-(formatted on first boot), and the first screen renders with readable, uncut fonts and no flicker
-(user-checked by eye; which screen exactly was not recorded). **Other screens are still untested.** Flash is now set to 16 MB (boot log
-confirms `SPI Flash Size : 16MB`; partition table unchanged: 3 MB app + 3 MB FAT).
+| Area | Status |
+|---|---|
+| ST7305 driver, framebuffer, text, fonts | **Run on the board.** Test pattern correct in landscape 400x300 with no rotation; text readable, no flicker. |
+| Editor core (typing, wrap, scroll) | **Run on the board.** |
+| Notes store and atomic save (`notes`, `fsutil`) | **Run on the board** (2026-10-29): typed text saves and survives a reset. This needed `CONFIG_FATFS_LFN_HEAP=y` (see below). |
+| USB keyboard (`usb_kbd`) | **Run on the board** (2026-10-29): a mechanical keyboard through an OTG adapter *with its own power* is detected and types. The board's USB-C still gives no 5 V by itself (see `docs/HARDWARE.md`). |
+| microSD (`storage`) | **Run on the board:** with a card inserted at boot, notes on it are read and written. Pins 38/21/39 (SDMMC 1-bit) come from Waveshare's example and are not yet checked against the schematic. The card is mounted once at boot; see "Known gaps". |
+| PCF85063 RTC (`pcf85063`) | **Run on the board:** the Set clock screen works and the time is kept while powered. **The time is lost on every unplug** because no RTC cell is fitted (the 18650 does not feed the RTC when the board is off, tested). Needs a rechargeable ML1220-type 3 V cell, see `docs/HARDWARE.md`. |
+| Screens seen on the board | Home, All writing, Editor with save states, Save failed banner, Set clock. |
+| Screens host only | Search, Look up (Ctrl+K in the editor), Preview, Details, Rename and its panels (Change status, Tags & category, Archive, Export notice), the empty-note hint (B1). |
+| Metadata (`<id>.meta`) | Host only: `test_meta`, `test_notes`. |
 
-**USB keyboard was tried and does not work on this board (2026-10-27).** The board's USB-C port does not
-source 5 V: with the board on its 18650 and a plain OTG adapter the keyboard stayed dark (not measured
-with a multimeter). Plugging the keyboard and the board into one hub made the keyboard light but gave
-no data path, because the hub was the host. The app showed "Keyboard not detected" throughout. A
-portable device cannot depend on external 5 V, so **the plan is a BLE keyboard** (section 3, 4). The
-`usb_kbd` component stays in the tree but is unproven; `usb_host_hid` was never seen to enumerate
-anything. Current `sdkconfig` was generated with `sdkconfig.usbhost` (UART0 console, USB host on);
-the previous one is `sdkconfig.bak-before-usbhost`.
-Compiled means only that it compiles: the `usb_host_hid` calls, SPI behavior and all UI are unverified.
-Use `. ~/esp/esp-idf/export.sh` in each new shell.
+Per-screen status and the key bindings are in `docs/DESIGN.md`.
 
-**2026-10-29 Search.** Home > Search (or Ctrl+K) opens a query box; `notes_search` scans every note's full text
-(ASCII case-insensitive; UTF-8 letters match only exactly) 250 ms after the last keystroke. Host-tested
-(`test_notes`); compiled; **not yet seen on the board**. Scans up to 64 results from up to 256 files, so it
-may feel slow on a large SD card. Each hit shows a snippet around the first match with the match bold and underlined, as in the mockup
-(`note_hit_t`, snippet logic host-tested incl. UTF-8 cuts). The screen was also rendered on the host and viewed as an
-image, but not on the panel.
+### What changed since the first flash (2026-10-27 to 2026-10-29)
 
-**2026-10-29 Metadata, Details and Rename (E1/E2).** `<id>.meta` sidecar files (see `docs/DESIGN.md`, "Metadata
-storage"), read by `notes_list`/`notes_search`/`notes_info`, written by `notes_meta_save`. The Details screen, the Rename,
-Change status, Tags & category and Archive panels, and status/flag in the lists are built. Host-tested logic (`test_meta`,
-`test_notes`, `test_format`); screens rendered on the host and viewed as images; **not yet run on the board**. Known
-limits: Export to card is only a notice; metadata is lost if a `.meta` file is deleted by hand (the note is unaffected);
-input in the text fields is ASCII only (the keyboard path only produces ASCII).
+- **Saving failed on every note** because `CONFIG_FATFS_LFN_NONE` (8.3 names only) rejects the atomic-save temp file
+  `ft-0001.txt.tmp`. `sdkconfig.defaults` now sets `CONFIG_FATFS_LFN_HEAP=y`. Verified on the board.
+- **microSD** pins were `-1`; now set (see above).
+- **RTC** driver and the Set clock screen (`components/pcf85063`, state `S_CLOCK`). It opens at boot when the chip lost its
+  time, or with Ctrl+T on Home. Its starting values are the firmware build time (`__DATE__`/`__TIME__`), not a real
+  clock. Esc skips it and the system clock then stays at 1970. The component is named `pcf85063` because ESP-IDF owns
+  `rtc.h` and `rtc_init`.
+- **Search** (Home, Ctrl+K): full text, ASCII case-insensitive, snippet with the match bold and underlined.
+- **Look up** (Ctrl+K in the editor): saves the draft, panel over the dimmed editor, Enter previews read-only in a second
+  64 KB buffer, Ctrl+Enter inserts `[[Title]]`, Esc steps back. The note being written is hidden from its own results.
+- **Metadata, Details, Rename:** see `docs/DESIGN.md` ("Metadata storage") for the format and for every decision that is
+  mine rather than the mockup's (statuses, tag format, what Archive does, Export being only a notice).
+- **B1:** placeholder and dashed hint box in a new empty note. Not italic: the font set has no italic.
+- Shared helpers: `util/textfind.c` (`tf_find_nocase`), `ui_dim`, `footer_at`, `hit_row`.
 
-**2026-10-29 Look up (D1/D2).** Ctrl+K in the editor saves the draft and opens a panel over the dimmed editor
-(`ui_dim` keeps a checkerboard of pixels); Enter previews a hit read-only in a second 64 KB buffer
-(`A.pv`), Ctrl+Enter inserts `[[Title]]` at the cursor, Esc steps back. The note being written is hidden from
-its own results. Compiled and rendered on the host (viewed as images); **not yet run on the board**. The search
-matcher moved to `components/util/textfind.c` (`tf_find_nocase`), shared by notes and the preview.
+Use `. ~/esp/esp-idf/export.sh` in each new shell. Note that it puts a Python venv first in `PATH` that has no Pillow;
+use `/usr/bin/python3 -I` for anything that needs Pillow (fonts, host renders).
 
-**2026-10-29 RTC.** `components/pcf85063` reads/writes the PCF85063 over I2C (`pcf_init` at boot sets the system
-clock; `pcf_set` writes the chip and the system clock). Register logic is in `pcf_regs.c` with host test
-`test_pcf`. The Set clock screen (`ui_clock`, state `S_CLOCK`) opens at boot if the chip lost its time, or
-with Ctrl+T on Home. Verified on the board: setting the time works. **The time is lost on every unplug
-because no RTC cell is fitted**, see `docs/HARDWARE.md`; this is hardware, not a bug. Until a cell is
-fitted (the 18650 does not help, tested), Set clock appears at each boot; its starting values are the firmware build
-time (`__DATE__`/`__TIME__`), not a real clock (Esc skips it, the system clock then stays at 1970). The component
-is named `pcf85063` because ESP-IDF already owns `rtc.h` and `rtc_init`.
+## 2. Flashing
 
-**2026-10-29 fixes.** Saving failed on every note because `CONFIG_FATFS_LFN_NONE` (8.3 names only) rejects the
-atomic-save temp file `ft-0001.txt.tmp`. `sdkconfig.defaults` now sets `CONFIG_FATFS_LFN_HEAP=y`; verified on the
-board. The microSD was not detected because `FT_SD_PIN_*` were `-1`; they are now set from the Waveshare example.
-Whether the card mounts is still to be confirmed (needs UART0 log or reading the card on a laptop).
+The current `sdkconfig` was generated with the `sdkconfig.usbhost` overlay (USB host on, UART0 console), so
+`/dev/ttyACM0` only appears in download mode. **Hold the rightmost button (BOOT) while plugging in USB** (the board has
+no RESET button), then `idf.py -p /dev/ttyACM0 flash`, then unplug and plug in again without BOOT. For a normal flash with
+the console on USB, delete `sdkconfig` and run `idf.py reconfigure` without the overlay. With the host build, logs are only on
+UART0 (GPIO43/44, needs a USB-UART adapter). Reading serial without a TTY: open the port with pyserial, toggle RTS to reset.
+After inserting a battery the board needs USB power once to activate (PWR short press powers on, long press powers off).
 
-## 2. Do this first
+Because the app gives no on-screen indication of where notes are stored, check the log line `microSD mounted` or
+`microSD mount failed ... using internal flash` when in doubt.
 
-Done on 2026-10-27: toolchain, `dialout`, first flash, panel orientation, full app boot, 16 MB flash.
+## 3. Known gaps (deferred by the user, not forgotten)
 
-Flashing: with the USB host build, `/dev/ttyACM0` does not appear. **Hold the rightmost button (BOOT)
-while plugging in USB** to enter download mode (this board has no RESET button), then
-`idf.py -p /dev/ttyACM0 flash`. For a normal flash with console on USB, delete `sdkconfig` and run
-`idf.py reconfigure` without the overlay. Reading serial without a TTY: open the port with pyserial, toggle
-RTS to reset. After inserting a battery the board needs USB power once to activate (PWR short press
-powers on, long press powers off).
+- **SD card is mounted once, at boot.** There is no card-detect pin and no remount. Pulling the card while the board is
+  on makes reads and writes fail until a restart, and a restart *without* a card silently falls back to the internal
+  flash `storage` partition, where new notes then live separately from the card's notes (same path, `/data/notes`).
+  Nothing on screen says which one is in use.
+- **A failed note listing shows "No writing yet"** (`refresh_notes` treats an error as zero notes), which makes notes look
+  lost when they are only unreadable.
+- Proposed fixes, not started: remount on failure and a periodic retry, show the storage in use ("SD card" / "Internal
+  memory") on the Status screen, show an error instead of "No writing yet", and optionally copy notes from flash to the
+  card when it returns (needs rules so nothing is overwritten).
+- The card is never formatted by the app (`format_if_mount_failed = false`); only the internal flash fallback is.
 
-Next: pick a BLE keyboard (the user has none yet, only a wired USB one), then build `ble_kbd`
-(section 4). Meanwhile KEY/battery work and the other screens can proceed without a keyboard.
+## 4. Open hardware questions
 
-## 3. Open hardware questions (blockers for features)
+| Question | State |
+|---|---|
+| 5 V for a USB keyboard | Not from the USB-C port alone (tested). A powered OTG adapter works. The header silkscreen shows a **VBUS** pin next to GPIO19/20; not tested electrically, so unknown whether it could power a keyboard. |
+| RTC cell | Needed to keep the time. ML1220 or a compatible 3 V/3.3 V rechargeable coin cell (Waveshare FAQ), on the 2-pin 1.0 mm connector, "+" on the left pin in the product photo. Check polarity on the real PCB; never a CR-type cell. |
+| microSD pins | Taken from Waveshare's example and they work with a card inserted at boot; not checked against the schematic. |
+| PWR button | The middle button; holding it powers the board off, so it is a power control, not an app key. KEY (left, GPIO18) and BOOT (right, GPIO0) are readable; KEY was not tested. |
+| Battery ADC (GPIO4) | Not tested; the UI must say "Not calibrated" until readings are verified. |
+| Does USB-C charge the 18650? | Not confirmed (watch the CHG LED). |
+| Flash size | 16 MB, set. The partition table is still 3 MB app + 3 MB FAT; about 10 MB are unused. Growing `storage` reformats `/data`. |
+| BLE keyboard | No longer urgent now that a powered OTG adapter works, but a portable device would still need it: the ESP32-S3 has Bluetooth LE only (no Classic), so only BLE HID keyboards can work. ESP-IDF has `examples/bluetooth/esp_hid_host`. |
 
-| Question | Why it matters | Where to look |
-|---|---|---|
-| Can the USB-C port supply 5 V to a keyboard? | **Answered: no** in the OTG test (see `docs/HARDWARE.md`). USB keyboard is dropped in favour of BLE. Only revisit if a header 5 V pin plus GPIO19/20 turns out to be exposed. | Waveshare schematic. |
-| microSD pins | `FT_SD_PIN_*` are `-1`, so notes use internal flash. | Schematic. Fill `board.h`; `storage.c` assumes SDMMC 1-bit. |
-| PWR button | **Partly answered:** it is the middle button; holding it powers the board off, so it works on power hardware, not as a normal app button. Do not use it as a navigation key. KEY (left, GPIO18, unverified) and BOOT (right, GPIO0) are the readable ones. | Schematic, for any GPIO that reads PWR. |
-| Flash size | **Answered:** 16 MB, now set. The partition table was left at 3 MB app + 3 MB FAT; about 10 MB are unused. Growing `storage` reformats `/data`. | |
-| Panel orientation | **Answered:** landscape 400x300, no rotation needed (test pattern correct on the board). | |
-| Which logs when USB host is on | Only relevant if USB host stays. The native USB port is the host, so USB Serial/JTAG logging stops. | `sdkconfig.usbhost` moves logs to UART0 (GPIO43/44, needs a USB-UART adapter). BLE does not need this, so USB logging can come back. |
-| Battery charging | The board has an 18650 holder and a charge/discharge circuit (chip and current not published on the pages read). CHG and WRN LEDs exist. Whether USB-C charges the cell is not stated. | Schematic; or watch the CHG LED with USB-C connected. |
-| Which BLE keyboard | ESP32-S3 has Bluetooth 5 LE only, no Bluetooth Classic, so a Classic or 2.4 GHz-dongle keyboard will not work. | See section 4 item 3. |
+## 5. Next steps, in order
 
-## 4. Next steps after it builds, in order
+1. **Look at the host-only screens on the board** (list in section 1) and report what is wrong. Layout numbers come from
+   the mockup's CSS and were only rendered on the host, so expect small tweaks.
+2. **F1 Status & settings** (not built): rows Keyboard, microSD (Ready, free space), Battery ("Not calibrated"), Date & time
+   (Enter opens the existing Set clock), Autosave, Firmware. The mockup does not say how to open it; a shortcut from Home is
+   the proposal. It also answers "which storage is in use".
+3. **A1 Recovery draft** (not built, needs a design first). Autosave currently overwrites the note every 3 s, so there is no
+   "draft" separate from the "saved version" as in the mockup. Decide when a draft is written and when it counts as saved.
+4. The SD gaps in section 3, if the user wants them.
+5. KEY/PWR button fallbacks and the battery ADC.
+6. BLE keyboard (`ble_kbd` with the same `kbd_event_t` interface as `usb_kbd`, pairing screen, bonds in NVS, auto-reconnect).
+7. Display: tune SPI speed (10 MHz now), consider partial windows (each keypress sends the full 15 KB, about 12 ms), and the
+   low-power sequence (datasheet section 7.11; only the HPM/LPM command is sent now).
 
-1. Confirm the panel shows the pattern and text correctly. If mirrored/rotated, adjust MADCTL
-   (`0x36`, now `0x48`) or the packer in `st7305_pack.c`, with a host test change to match.
-2. Tune SPI speed (10 MHz now) and check for flicker; consider the datasheet's partial window
-   (CASET/RASET) once the full-frame path works. Each keypress currently repaints and sends all
-   15 KB (about 12 ms at 10 MHz).
-3. Keyboard over **BLE HID (HOGP)**, replacing USB as the main path. The ESP32-S3 has Bluetooth 5 LE
-   only. ESP-IDF ships `examples/bluetooth/esp_hid_host` and the `esp_hid` component. Plan: a
-   `ble_kbd` component with the same `kbd_event_t` interface as `usb_kbd`, so `app.c` is unchanged;
-   a pairing screen (scan, pick, passkey), bonds stored in NVS, auto-reconnect at boot, key repeat
-   (see `kbd_hid.c`, already host-tested), and a battery-draw check. Needs a US-layout keyboard that
-   advertises BLE (not "Bluetooth 3.0", not a dongle-only one). Not started; the user has no such
-   keyboard yet. Then drop `sdkconfig.usbhost` and bring USB Serial/JTAG logging back.
-4. Confirm the SD card mounts, then PWR/KEY buttons and battery ADC (GPIO4, show "Not calibrated" until
-   verified). RTC is done in software; it needs a backup cell to keep the time (see above).
-5. Remaining screens and features, see `docs/DESIGN.md` (Search, preview, Details, Rename,
-   recovery on boot, Device status).
-6. Low-power mode: only the HPM/LPM command is sent; the datasheet's voltage re-setting sequence
-   (section 7.11) is not implemented.
+## 6. Known risks in the existing code
 
-## 5. Known risks in the existing code
-
-- **`usb_host_hid` API.** `usb_kbd.c` was written from memory of the component's `hid_host` example
-  (`hid_host_device_get_params`, `hid_host_device_open/start/close`, `hid_class_request_set_protocol`,
-  `hid_class_request_set_idle`, `hid_host_device_get_raw_input_report_data`, event enum names).
-  Names or struct fields may differ in the version the component manager fetches.
-- **SPI details.** `SPI_TRANS_CS_KEEP_ACTIVE` is used to hold CS low from the RAMWR command through
-  the 15 KB data burst; verify the data lands and the commands (sent one byte per transaction, CS
-  toggling) are accepted.
-- **Init sequence provenance.** Taken from the Waveshare driver as ported in
-  `kylehase/ESPHome-ST7305-RLCD` (Apache-2.0), including command `0x62` that the datasheet does not
-  describe. The datasheet's own example is for a 264x320 panel and uses different values.
-- **`notes_list` limit.** It reads up to 256 ids in directory order, fills at most 64, then sorts by
-  mtime. With more than 64 notes the newest may be missing. Also FAT mtimes are wrong without an RTC.
-  Fix: sort ids before reading, or keep a small index.
+- **`notes_list` limit.** It reads up to 256 ids in directory order, fills at most 64, then sorts by mtime. With more than 64
+  notes the newest may be missing. Fix: sort ids before reading, or keep a small index. It also reads each note's `.meta`.
+- **Search cost.** `notes_search` loads every note's text for each query (after a 250 ms pause); it may feel slow on a large card.
 - **`notes` is not reentrant** (static id tables). Call it from the app task only.
-- **Editor limits.** Buffer is a fixed 64 KB (PSRAM). Out-of-memory while growing the line table is
-  not handled beyond keeping the lines laid out so far. Tab is ignored. No undo.
-- **Wear.** Autosave rewrites the whole note every 3 s of idle after an edit. Fine for the SD card;
-  the internal flash fallback is wear-levelled but is meant only for bring-up.
-- **Untested UI geometry.** Layout numbers come from the mockup's CSS; nothing was rendered.
-  Likely tweaks: baseline alignment of text in boxes, footer item spacing, the 6th list row being
-  clipped by the footer on purpose.
-- **`main/main.c`** keeps the bring-up code behind `CONFIG_FT_APP`; when the app is on, that code is
-  unreachable but still compiled.
+- **Editor limits.** The buffer is a fixed 64 KB (PSRAM); the preview has a second one. Out-of-memory while growing the line
+  table is not handled beyond keeping the lines laid out so far. Tab is ignored. No undo. Text fields in the Details panels
+  and the search box take ASCII only (the keyboard path only produces ASCII).
+- **Memory.** `A` in `app.c` holds the note list, the search results and their snippets (tens of KB of internal RAM). Watch it
+  if the limits grow.
+- **Wear.** Autosave rewrites the whole note every 3 s of idle after an edit. Fine for the SD card; the internal flash fallback is
+  wear-levelled but meant for bring-up.
+- **Metadata.** `<id>.meta` is optional: delete one by hand and the note is unaffected, but its title, status, tags, flag and
+  created time go back to the defaults.
+- **Time.** FAT times are wrong while the clock is unset; "created" is only written once the clock reads 2025 or later.
+- **Init sequence provenance.** Taken from the Waveshare driver as ported in `kylehase/ESPHome-ST7305-RLCD` (Apache-2.0),
+  including command `0x62` that the datasheet does not describe. The datasheet's own example is for a 264x320 panel.
+- **`main/main.c`** keeps the bring-up code behind `CONFIG_FT_APP`; with the app on, that code is unreachable but still compiled.
 
-## 6. Decisions already made (do not redo without reason)
+## 7. Decisions already made (do not redo without reason)
 
 - ESP-IDF, not Arduino/PlatformIO (best USB host and SD support). Chosen by the user.
-- Notes are plain UTF-8 `.txt` files, one per note, no database. Metadata such as manual title,
-  status, tags and flag is **not** stored yet; the plan is a sidecar file per note.
+- Notes are plain UTF-8 `.txt` files, one per note, no database. Metadata lives in a sidecar `.meta` per note.
 - Fonts are IBM Plex rendered to bitmaps (SIL OFL 1.1; license text in `third_party/ibm-plex`).
-- The user's keyboard is wired USB (HID boot protocol, US layout).
-- Mockup is the source of truth for screens; see `docs/DESIGN.md`.
+- The user's keyboard is wired USB (HID boot protocol, US layout), used through a powered OTG adapter.
+- The mockup is the source of truth for screens: the Claude Design canvas "FocusType — RLCD Screens"
+  (`https://claude.ai/artifact/T8zGCdmbkZBKXvRYoEt3x9`, private to the owner's account; read it with the Artifact tool).
+  Anything the mockup does not draw is a decision of the implementer and is listed in `docs/DESIGN.md`.

@@ -294,21 +294,12 @@ static void scrollbar(int x, int y, int h, size_t total, size_t visible, size_t 
     gfx_fill_rect(x, ty, 3, th, true);
 }
 
-void ui_list(const ui_row_t *rows, size_t n, size_t sel, size_t top)
+/* Draws up to max_rows result rows starting at y0; the row at `sel` is highlighted. */
+static void list_rows(const ui_row_t *rows, size_t n, size_t sel, size_t top, int y0, size_t max_rows)
 {
-    gfx_clear(false);
-    char right[32];
-    snprintf(right, sizeof(right), "%lu \xC2\xB7 newest first", (unsigned long)n);
-    header(&font_plex_sans_13_bold, "All writing", &font_plex_sans_13, right);
-
-    if (n == 0) {
-        draw(&font_plex_sans_15_semibold, MARGIN_X, BODY_Y + 12, 19, "No writing yet", true);
-        draw(&font_plex_sans_12, MARGIN_X, BODY_Y + 34, 15, "Press Ctrl+N on Home to start a new note.", true);
-    }
-
     const int x = 0, w = GFX_W - 10;
-    for (size_t i = top, row = 0; i < n && row < 6; i++, row++) {
-        const int y = BODY_Y + (int)row * LIST_ROW_H;
+    for (size_t i = top, row = 0; i < n && row < max_rows; i++, row++) {
+        const int y = y0 + (int)row * LIST_ROW_H;
         const bool selected = i == sel;
         if (selected) {
             gfx_fill_rect(x, y, w, LIST_ROW_H, true);
@@ -335,11 +326,62 @@ void ui_list(const ui_row_t *rows, size_t n, size_t sel, size_t top)
         draw(&font_plex_sans_12, MARGIN_X, y + 5 + 19 + 1, 15, rows[i].sub, ink);
     }
 
+}
+
+void ui_list(const ui_row_t *rows, size_t n, size_t sel, size_t top)
+{
+    gfx_clear(false);
+    char right[32];
+    snprintf(right, sizeof(right), "%lu \xC2\xB7 newest first", (unsigned long)n);
+    header(&font_plex_sans_13_bold, "All writing", &font_plex_sans_13, right);
+
+    if (n == 0) {
+        draw(&font_plex_sans_15_semibold, MARGIN_X, BODY_Y + 12, 19, "No writing yet", true);
+        draw(&font_plex_sans_12, MARGIN_X, BODY_Y + 34, 15, "Press Ctrl+N on Home to start a new note.", true);
+    }
+
+    list_rows(rows, n, sel, top, BODY_Y, 6);
+
     /* The 6th row may be cut by the footer; clear that area and redraw the footer on top. */
     static const hint_t hints[] = {
         {"Enter", "Open to edit"}, {"\xE2\x86\x92", "Details"}, {"Esc", "Home"}};
     footer(hints, 3);
     scrollbar(GFX_W - 6, BODY_Y + 6, FTR_Y - BODY_Y - 12, n, UI_LIST_PAGE, top);
+}
+
+/* ---- Search ---------------------------------------------------------------------------- */
+
+#define SEARCH_BOX_H 30
+
+void ui_search(const char *query, const ui_row_t *rows, size_t n, size_t sel, size_t top)
+{
+    gfx_clear(false);
+    char right[32] = "";
+    if (query[0]) {
+        snprintf(right, sizeof(right), "%lu found", (unsigned long)n);
+    }
+    header(&font_plex_sans_13_bold, "Search", &font_plex_sans_13, right[0] ? right : NULL);
+
+    /* query box with a caret */
+    const int bx = MARGIN_X, by = BODY_Y + 4, bw = GFX_W - 2 * MARGIN_X;
+    gfx_rect(bx, by, bw, SEARCH_BOX_H - 4, 2, true);
+    char shown[64];
+    fit(&font_plex_mono_17, query, bw - 24, shown, sizeof(shown));
+    const int tx = bx + 8;
+    const int w = draw(&font_plex_mono_17, tx, by, SEARCH_BOX_H - 4, shown, true);
+    gfx_fill_rect(tx + w + 1, by + 5, 2, SEARCH_BOX_H - 4 - 10, true);
+
+    const int y0 = BODY_Y + SEARCH_BOX_H + 6;
+    if (query[0] == '\0') {
+        draw(&font_plex_sans_12, MARGIN_X, y0 + 6, 15, "Type to search the full text of your writing.", true);
+    } else if (n == 0) {
+        draw(&font_plex_sans_15_semibold, MARGIN_X, y0 + 6, 19, "Nothing found", true);
+    } else {
+        list_rows(rows, n, sel, top, y0, UI_SEARCH_PAGE);
+    }
+
+    static const hint_t hints[] = {{"\xE2\x86\x91\xE2\x86\x93", "Select"}, {"Enter", "Open"}, {"Esc", "Home"}};
+    footer(hints, 3);
 }
 
 /* ---- Editor ---------------------------------------------------------------------------- */

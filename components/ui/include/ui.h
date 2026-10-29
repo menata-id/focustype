@@ -18,6 +18,7 @@
 #define UI_EDITOR_LINES         11    /* visible text lines */
 #define UI_EDITOR_LINES_BANNER  7     /* visible lines while an error banner is shown */
 #define UI_LIST_PAGE            5     /* rows moved by PgUp/PgDn on the list */
+#define UI_SEARCH_PAGE          4     /* result rows visible under the search box */
 
 typedef struct {
     char title[64];
@@ -43,6 +44,10 @@ void ui_home(int sel, bool has_continue, const char *cont_title, const char *con
 /* All writing. `rows` holds n rows; the row at `sel` is highlighted and `top` is the first
  * visible row. n is also shown in the header. */
 void ui_list(const ui_row_t *rows, size_t n, size_t sel, size_t top);
+
+/* Search. `query` is shown in the box; `rows` holds the n matches (highlighted row `sel`, first
+ * visible row `top`). With an empty query a hint is shown instead of results. */
+void ui_search(const char *query, const ui_row_t *rows, size_t n, size_t sel, size_t top);
 
 /* Editor. saved_time is shown after "Saved"; if it is NULL or empty the header says "New note". Pass banner_head/banner_text (or NULL) to show
  * an error banner above the footer; then only UI_EDITOR_LINES_BANNER lines are visible. */

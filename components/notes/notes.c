@@ -158,6 +158,53 @@ int notes_list(note_info_t *out, size_t max, size_t *count)
     return 0;
 }
 
+static bool contains_nocase(const char *text, size_t len, const char *needle, size_t nlen)
+{
+    if (nlen == 0 || nlen > len) {
+        return false;
+    }
+    for (size_t i = 0; i + nlen <= len; i++) {
+        size_t j = 0;
+        while (j < nlen && tolower((unsigned char)text[i + j]) == tolower((unsigned char)needle[j])) {
+            j++;
+        }
+        if (j == nlen) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int notes_search(const char *query, note_info_t *out, size_t max, size_t *count)
+{
+    static char ids[MAX_IDS][NOTE_ID_LEN];
+    *count = 0;
+    const size_t qlen = strlen(query);
+    if (qlen == 0) {
+        return 0;
+    }
+    size_t n = 0;
+    if (scan_ids(ids, MAX_IDS, &n) != 0) {
+        return -1;
+    }
+    size_t k = 0;
+    for (size_t i = 0; i < n && k < max; i++) {
+        char *text = NULL;
+        size_t len = 0;
+        if (notes_load(ids[i], &text, &len) != 0) {
+            continue;
+        }
+        const bool hit = contains_nocase(text, len, query, qlen);
+        free(text);
+        if (hit && fill_info(ids[i], &out[k]) == 0) {
+            k++;
+        }
+    }
+    qsort(out, k, sizeof(out[0]), newer_first);
+    *count = k;
+    return 0;
+}
+
 int notes_new_id(char id[NOTE_ID_LEN])
 {
     static char ids[MAX_IDS][NOTE_ID_LEN];

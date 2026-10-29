@@ -40,6 +40,11 @@ the previous one is `sdkconfig.bak-before-usbhost`.
 Compiled means only that it compiles: the `usb_host_hid` calls, SPI behavior and all UI are unverified.
 Use `. ~/esp/esp-idf/export.sh` in each new shell.
 
+**2026-10-29 Search.** Home > Search (or Ctrl+K) opens a query box; `notes_search` scans every note's full text
+(ASCII case-insensitive; UTF-8 letters match only exactly) 250 ms after the last keystroke. Host-tested
+(`test_notes`); compiled; **not yet seen on the board**. Scans up to 64 results from up to 256 files, so it
+may feel slow on a large SD card. No snippet or match highlight yet.
+
 **2026-10-29 RTC.** `components/pcf85063` reads/writes the PCF85063 over I2C (`pcf_init` at boot sets the system
 clock; `pcf_set` writes the chip and the system clock). Register logic is in `pcf_regs.c` with host test
 `test_pcf`. The Set clock screen (`ui_clock`, state `S_CLOCK`) opens at boot if the chip lost its time, or

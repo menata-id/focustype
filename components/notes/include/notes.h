@@ -35,3 +35,7 @@ int notes_load(const char *id, char **text, size_t *len);
 int notes_save(const char *id, const char *text, size_t len);
 
 int notes_remove(const char *id);
+
+/* Notes whose text contains `query`, newest first. The match ignores ASCII letter case and
+ * looks at the whole text, not just the title. An empty query matches nothing. */
+int notes_search(const char *query, note_info_t *out, size_t max, size_t *count);

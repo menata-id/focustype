@@ -26,7 +26,7 @@ it, the geometry and behaviour are recorded here and in `components/ui/ui.c`.
 | B2 | First line becomes the title | built | `ed_title`, header |
 | B3 | Editor with save states | built | `ui_editor`, `key_editor` |
 | B4 | Save failed banner | built (text generic, mockup says microSD) | `ui_editor`, `save_now` |
-| C1 | Search from Home | not built | Ctrl+K from Home |
+| C1 | Search from Home | built, not yet seen on the board (full text, ASCII case-insensitive, no highlight of the match) | `ui_search`, `key_search`, `notes_search` |
 | C2 | All writing | built (no Details yet) | `ui_list`, `key_list` |
 | D1 | Ctrl+K inside a note | not built | |
 | D2 | Read-only preview, Ctrl+Enter inserts a reference | not built | |
@@ -53,7 +53,8 @@ it, the geometry and behaviour are recorded here and in `components/ui/ui.c`.
 
 | Context | Keys |
 |---|---|
-| Home | Up/Down select, Enter open, Ctrl+N new, Ctrl+O all writing, Ctrl+T set clock |
+| Home | Up/Down select, Enter open, Ctrl+N new, Ctrl+O all writing, Ctrl+K search, Ctrl+T set clock |
+| Search | typing and Backspace edit the query (results update 250 ms after the last key), Up/Down select, Enter open, Esc home |
 | Set clock | Left/Right (or Tab) field, Up/Down change, PgUp/PgDn change by 10, Enter set, Esc cancel |
 | All writing | Up/Down, PgUp/PgDn, Enter open, Esc home |
 | Editor | typing, Enter, Backspace, Delete, arrows, Home/End, PgUp/PgDn, Ctrl+S save, Esc save-and-leave |

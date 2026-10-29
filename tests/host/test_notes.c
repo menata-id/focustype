@@ -88,6 +88,13 @@ int main(void)
     CHECK(notes_load("ft-0008", &text, &len) == 0 && len == 0);
     free(text);
 
+    /* search: whole text, any letter case; empty or unmatched queries find nothing */
+    CHECK(notes_search("THREE Words", list, 8, &n) == 0 && n == 1 && strcmp(list[0].id, "ft-0002") == 0);
+    CHECK(notes_search("recovered", list, 8, &n) == 0 && n == 1 && strcmp(list[0].id, "ft-0007") == 0);
+    CHECK(notes_search("re", list, 8, &n) == 0 && n == 3);  /* Replaced, three, Recovered */
+    CHECK(notes_search("", list, 8, &n) == 0 && n == 0);
+    CHECK(notes_search("zzz", list, 8, &n) == 0 && n == 0);
+
     /* remove */
     CHECK(notes_remove(id2) == 0);
     CHECK(notes_list(list, 8, &n) == 0 && n == 3);  /* ft-0001, ft-0007, ft-0008 */

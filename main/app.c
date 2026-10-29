@@ -33,9 +33,11 @@ static const char *TAG = "app";
 #define MAX_NOTES      64
 #define AUTOSAVE_MS    3000
 #define KBD_WAIT_MS    5000
+#define SEARCH_DELAY_MS 250   /* wait after the last keystroke before scanning the notes */
+#define QUERY_MAX      48
 #define NOTES_DIR      STORAGE_MOUNT_POINT "/notes"
 
-typedef enum { S_HOME, S_LIST, S_EDITOR, S_KBD_ERR, S_CLOCK } state_t;
+typedef enum { S_HOME, S_LIST, S_EDITOR, S_KBD_ERR, S_CLOCK, S_SEARCH } state_t;
 
 static struct {
     state_t state, prev_state;
@@ -51,6 +53,15 @@ static struct {
     ui_save_t save;
     time_t saved_at;
     int64_t last_edit_ms;
+
+    struct {
+        char q[QUERY_MAX];
+        size_t qlen;
+        note_info_t res[MAX_NOTES];
+        size_t n, sel, top;
+        bool pending;        /* the query changed and the results are stale */
+        int64_t last_key_ms;
+    } search;
 
     struct {
         int v[UI_CLOCK_FIELDS];  /* year, month, day, hour, minute */
@@ -177,6 +188,82 @@ static void show_kbd_error(void)
     }
     A.prev_state = A.state;
     A.state = S_KBD_ERR;
+}
+
+/* ---- search ---------------------------------------------------------------------------- */
+
+static void open_search(void)
+{
+    A.search.q[0] = '\0';
+    A.search.qlen = 0;
+    A.search.n = A.search.sel = A.search.top = 0;
+    A.search.pending = false;
+    A.state = S_SEARCH;
+}
+
+static void run_search(void)
+{
+    size_t n = 0;
+    if (notes_search(A.search.q, A.search.res, MAX_NOTES, &n) != 0) {
+        n = 0;
+    }
+    A.search.n = n;
+    A.search.sel = A.search.top = 0;
+    A.search.pending = false;
+}
+
+static void search_clamp(void)
+{
+    if (A.search.sel < A.search.top) {
+        A.search.top = A.search.sel;
+    } else if (A.search.sel >= A.search.top + UI_SEARCH_PAGE) {
+        A.search.top = A.search.sel - UI_SEARCH_PAGE + 1;
+    }
+}
+
+static void key_search(const kbd_event_t *ev)
+{
+    switch (ev->key) {
+    case KBD_KEY_CHAR:
+        if (!(ev->mods & KBD_MOD_CTRL) && A.search.qlen + 1 < sizeof(A.search.q)) {
+            A.search.q[A.search.qlen++] = ev->ch;
+            A.search.q[A.search.qlen] = '\0';
+            A.search.pending = true;
+            A.search.last_key_ms = now_ms();
+        }
+        break;
+    case KBD_KEY_BACKSPACE:
+        if (A.search.qlen > 0) {
+            A.search.q[--A.search.qlen] = '\0';
+            A.search.pending = true;
+            A.search.last_key_ms = now_ms();
+        }
+        break;
+    case KBD_KEY_UP:
+        if (A.search.sel > 0) {
+            A.search.sel--;
+        }
+        break;
+    case KBD_KEY_DOWN:
+        if (A.search.sel + 1 < A.search.n) {
+            A.search.sel++;
+        }
+        break;
+    case KBD_KEY_ENTER:
+        if (A.search.pending) {
+            run_search();
+        }
+        if (A.search.n > 0) {
+            open_note(A.search.res[A.search.sel].id, false);
+        }
+        return;
+    case KBD_KEY_ESC:
+        go_home();
+        return;
+    default:
+        break;
+    }
+    search_clamp();
 }
 
 /* ---- clock ----------------------------------------------------------------------------- */
@@ -312,6 +399,18 @@ static void render_list(void)
     ui_list(rows, A.nnotes, A.list_sel, A.list_top);
 }
 
+static void render_search(void)
+{
+    static ui_row_t rows[MAX_NOTES];
+    const time_t now = time(NULL);
+    for (size_t i = 0; i < A.search.n; i++) {
+        snprintf(rows[i].title, sizeof(rows[i].title), "%s", A.search.res[i].title);
+        ui_format_when(A.search.res[i].mtime, now, rows[i].when, sizeof(rows[i].when));
+        ui_format_words(A.search.res[i].words, rows[i].sub, sizeof(rows[i].sub));
+    }
+    ui_search(A.search.q, rows, A.search.n, A.search.sel, A.search.top);
+}
+
 static void render_editor(void)
 {
     char title[64], when[16];
@@ -342,6 +441,9 @@ static void render(void)
         ui_kbd_error(when);
         break;
     }
+    case S_SEARCH:
+        render_search();
+        break;
     case S_CLOCK:
         ui_clock(A.clk.v[0], A.clk.v[1], A.clk.v[2], A.clk.v[3], A.clk.v[4], A.clk.field,
                  A.clk.first_run);
@@ -365,6 +467,8 @@ static void key_home(const kbd_event_t *ev)
             A.state = S_LIST;
         } else if (ev->ch == 't') {
             open_clock(false);
+        } else if (ev->ch == 'k') {
+            open_search();
         }
         return;
     }
@@ -387,8 +491,9 @@ static void key_home(const kbd_event_t *ev)
         } else if (A.home_sel == 2) {
             list_clamp();
             A.state = S_LIST;
+        } else if (A.home_sel == 3) {
+            open_search();
         }
-        /* 3 = Search: not built yet */
         break;
     default:
         break;
@@ -524,6 +629,9 @@ static void handle_key(const kbd_event_t *ev)
     case S_EDITOR:
         key_editor(ev);
         break;
+    case S_SEARCH:
+        key_search(ev);
+        break;
     case S_CLOCK:
         key_clock(ev);
         break;
@@ -538,6 +646,11 @@ static void tick(void)
     if (A.state == S_EDITOR && A.ed.dirty && A.save == UI_UNSAVED &&
         now_ms() - A.last_edit_ms >= AUTOSAVE_MS) {
         save_now();
+        A.dirty_screen = true;
+    }
+    if (A.state == S_SEARCH && A.search.pending &&
+        now_ms() - A.search.last_key_ms >= SEARCH_DELAY_MS) {
+        run_search();
         A.dirty_screen = true;
     }
 #if CONFIG_FT_ENABLE_USB_KBD

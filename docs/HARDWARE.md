@@ -60,6 +60,15 @@ FAQ; not yet verified on the board):**
   cell fitted. To keep the time, fit a rechargeable PH1.0 RTC cell (check its voltage
   and polarity against the Waveshare accessory page before buying; never a non-rechargeable CR cell).
 
+**RTC cell circuit (read from the schematic text, 2026-10-29):** connector J7 is a "SH1.0 2P" (1.0 mm pitch,
+beige, vertical SMD; the wiki calls it PH1.0, so check the pitch on the real connector before buying). Net
+`RTC_BAT` is fed from `VCC3V3` through D2 (B5819WS Schottky) with C11 1 uF to GND, and goes to the PCF85063
+backup supply. I found no series resistor or charger IC: the diode charges the cell straight from 3.3 V, so
+the cell sees about 3.0 V (3.3 V minus the diode drop) with no current limit. Hence "rechargeable only" and a
+cell that is happy at about 3 V (3 V lithium-manganese rechargeable type such as ML-series coin cells). A
+non-rechargeable cell or a 3.7 V LiPo is wrong. Pin 1/2 polarity of J7 was not legible in the text; check
+with a multimeter on a powered board (RTC_BAT side is the one near the diode) before connecting.
+
 **microSD:** SDMMC 1-bit, CLK 38, CMD 21, D0 39, taken from Waveshare's `esp-idf/06_SD_Card` example
 (`sdcard_bsp.h` defaults). Not yet checked against the schematic. Mounting not yet confirmed.
 

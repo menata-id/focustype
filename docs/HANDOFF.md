@@ -47,6 +47,12 @@ may feel slow on a large SD card. Each hit shows a snippet around the first matc
 (`note_hit_t`, snippet logic host-tested incl. UTF-8 cuts). The screen was also rendered on the host and viewed as an
 image, but not on the panel.
 
+**2026-10-29 Look up (D1/D2).** Ctrl+K in the editor saves the draft and opens a panel over the dimmed editor
+(`ui_dim` keeps a checkerboard of pixels); Enter previews a hit read-only in a second 64 KB buffer
+(`A.pv`), Ctrl+Enter inserts `[[Title]]` at the cursor, Esc steps back. The note being written is hidden from
+its own results. Compiled and rendered on the host (viewed as images); **not yet run on the board**. The search
+matcher moved to `components/util/textfind.c` (`tf_find_nocase`), shared by notes and the preview.
+
 **2026-10-29 RTC.** `components/pcf85063` reads/writes the PCF85063 over I2C (`pcf_init` at boot sets the system
 clock; `pcf_set` writes the chip and the system clock). Register logic is in `pcf_regs.c` with host test
 `test_pcf`. The Set clock screen (`ui_clock`, state `S_CLOCK`) opens at boot if the chip lost its time, or

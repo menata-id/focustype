@@ -24,6 +24,7 @@
 #include "pcf_regs.h"
 #include "st7305.h"
 #include "storage.h"
+#include "textfind.h"
 #include "ui.h"
 #include "usb_kbd.h"
 
@@ -37,7 +38,7 @@ static const char *TAG = "app";
 #define QUERY_MAX      48
 #define NOTES_DIR      STORAGE_MOUNT_POINT "/notes"
 
-typedef enum { S_HOME, S_LIST, S_EDITOR, S_KBD_ERR, S_CLOCK, S_SEARCH } state_t;
+typedef enum { S_HOME, S_LIST, S_EDITOR, S_KBD_ERR, S_CLOCK, S_SEARCH, S_LOOKUP, S_PREVIEW } state_t;
 
 static struct {
     state_t state, prev_state;
@@ -59,9 +60,17 @@ static struct {
         size_t qlen;
         note_hit_t res[MAX_NOTES];
         size_t n, sel, top;
+        size_t page;         /* result rows visible on the current screen */
         bool pending;        /* the query changed and the results are stale */
         int64_t last_key_ms;
     } search;
+
+    struct {
+        ed_t ed;             /* the note being previewed; top_line is the scroll position */
+        char *buf;
+        char title[64];
+        char meta[64];
+    } pv;
 
     struct {
         int v[UI_CLOCK_FIELDS];  /* year, month, day, hour, minute */
@@ -192,13 +201,31 @@ static void show_kbd_error(void)
 
 /* ---- search ---------------------------------------------------------------------------- */
 
-static void open_search(void)
+static void edited(void);
+
+static void reset_search(size_t page)
 {
     A.search.q[0] = '\0';
     A.search.qlen = 0;
     A.search.n = A.search.sel = A.search.top = 0;
+    A.search.page = page;
     A.search.pending = false;
+}
+
+static void open_search(void)
+{
+    reset_search(UI_SEARCH_PAGE);
     A.state = S_SEARCH;
+}
+
+/* Ctrl+K in the editor. The draft is saved first, so nothing is lost whatever happens next. */
+static void open_lookup(void)
+{
+    if (A.ed.dirty) {
+        save_now();
+    }
+    reset_search(UI_LOOKUP_PAGE);
+    A.state = S_LOOKUP;
 }
 
 static void run_search(void)
@@ -206,6 +233,16 @@ static void run_search(void)
     size_t n = 0;
     if (notes_search(A.search.q, A.search.res, MAX_NOTES, &n) != 0) {
         n = 0;
+    }
+    if (A.state == S_LOOKUP) {
+        /* the note being written is not a useful result for itself */
+        size_t k = 0;
+        for (size_t i = 0; i < n; i++) {
+            if (strcmp(A.search.res[i].info.id, A.cur_id) != 0) {
+                A.search.res[k++] = A.search.res[i];
+            }
+        }
+        n = k;
     }
     A.search.n = n;
     A.search.sel = A.search.top = 0;
@@ -216,12 +253,13 @@ static void search_clamp(void)
 {
     if (A.search.sel < A.search.top) {
         A.search.top = A.search.sel;
-    } else if (A.search.sel >= A.search.top + UI_SEARCH_PAGE) {
-        A.search.top = A.search.sel - UI_SEARCH_PAGE + 1;
+    } else if (A.search.sel >= A.search.top + A.search.page) {
+        A.search.top = A.search.sel - A.search.page + 1;
     }
 }
 
-static void key_search(const kbd_event_t *ev)
+/* Query editing and result selection, shared by Search and Look up. True if the key was used. */
+static bool search_input(const kbd_event_t *ev)
 {
     switch (ev->key) {
     case KBD_KEY_CHAR:
@@ -231,24 +269,37 @@ static void key_search(const kbd_event_t *ev)
             A.search.pending = true;
             A.search.last_key_ms = now_ms();
         }
-        break;
+        return true;
     case KBD_KEY_BACKSPACE:
         if (A.search.qlen > 0) {
             A.search.q[--A.search.qlen] = '\0';
             A.search.pending = true;
             A.search.last_key_ms = now_ms();
         }
-        break;
+        return true;
     case KBD_KEY_UP:
         if (A.search.sel > 0) {
             A.search.sel--;
         }
-        break;
+        search_clamp();
+        return true;
     case KBD_KEY_DOWN:
         if (A.search.sel + 1 < A.search.n) {
             A.search.sel++;
         }
-        break;
+        search_clamp();
+        return true;
+    default:
+        return false;
+    }
+}
+
+static void key_search(const kbd_event_t *ev)
+{
+    if (search_input(ev)) {
+        return;
+    }
+    switch (ev->key) {
     case KBD_KEY_ENTER:
         if (A.search.pending) {
             run_search();
@@ -256,14 +307,128 @@ static void key_search(const kbd_event_t *ev)
         if (A.search.n > 0) {
             open_note(A.search.res[A.search.sel].info.id, false);
         }
-        return;
+        break;
     case KBD_KEY_ESC:
         go_home();
+        break;
+    default:
+        break;
+    }
+}
+
+/* ---- look up while writing --------------------------------------------------------------- */
+
+static void pv_clamp(void)
+{
+    const size_t n = ed_line_count(&A.pv.ed);
+    const size_t max_top = n > UI_PREVIEW_LINES ? n - UI_PREVIEW_LINES : 0;
+    if (A.pv.ed.top_line > max_top) {
+        A.pv.ed.top_line = max_top;
+    }
+}
+
+static void open_preview(void)
+{
+    const note_hit_t *h = &A.search.res[A.search.sel];
+    char *text = NULL;
+    size_t len = 0;
+    if (!A.pv.buf || notes_load(h->info.id, &text, &len) != 0) {
+        return;
+    }
+    const bool fits = ed_set_text(&A.pv.ed, text, len);
+    free(text);
+    if (!fits) {
+        ESP_LOGW(TAG, "%s is too large to preview", h->info.id);
+        return;
+    }
+    char when[16], words[24];
+    ui_format_when(h->info.mtime, time(NULL), when, sizeof(when));
+    ui_format_words(h->info.words, words, sizeof(words));
+    snprintf(A.pv.title, sizeof(A.pv.title), "%s", h->info.title);
+    snprintf(A.pv.meta, sizeof(A.pv.meta), "edited %s \xC2\xB7 %s", when, words);
+
+    /* start one line above the first match so it is in view */
+    const size_t off = tf_find_nocase(A.pv.ed.buf, A.pv.ed.len, A.search.q, A.search.qlen);
+    size_t line = 0;
+    if (off != TF_NOT_FOUND) {
+        const size_t n = ed_line_count(&A.pv.ed);
+        for (size_t i = 0; i < n && ed_line_start(&A.pv.ed, i) <= off; i++) {
+            line = i;
+        }
+    }
+    A.pv.ed.top_line = line > 0 ? line - 1 : 0;
+    pv_clamp();
+    A.state = S_PREVIEW;
+}
+
+static void key_lookup(const kbd_event_t *ev)
+{
+    if (search_input(ev)) {
+        return;
+    }
+    switch (ev->key) {
+    case KBD_KEY_ENTER:
+        if (A.search.pending) {
+            run_search();
+        }
+        if (A.search.n > 0) {
+            open_preview();
+        }
+        break;
+    case KBD_KEY_ESC:
+        A.state = S_EDITOR;  /* the draft and its cursor were never touched */
+        break;
+    default:
+        break;
+    }
+}
+
+/* Puts "[[Title]]" at the cursor of the draft and returns to it. */
+static void insert_reference(void)
+{
+    char ref[sizeof(A.pv.title) + 4];
+    const int n = snprintf(ref, sizeof(ref), "[[%s]]", A.pv.title);
+    if (n > 0 && ed_insert(&A.ed, ref, (size_t)n)) {
+        edited();
+    }
+    A.state = S_EDITOR;
+}
+
+static void key_preview(const kbd_event_t *ev)
+{
+    size_t *top = &A.pv.ed.top_line;
+    switch (ev->key) {
+    case KBD_KEY_UP:
+        *top = *top > 0 ? *top - 1 : 0;
+        break;
+    case KBD_KEY_DOWN:
+        (*top)++;
+        break;
+    case KBD_KEY_PGUP:
+        *top = *top > UI_PREVIEW_LINES ? *top - UI_PREVIEW_LINES : 0;
+        break;
+    case KBD_KEY_PGDN:
+        *top += UI_PREVIEW_LINES;
+        break;
+    case KBD_KEY_HOME:
+        *top = 0;
+        break;
+    case KBD_KEY_END:
+        *top = (size_t)-1;
+        break;
+    case KBD_KEY_ENTER:
+        if (ev->mods & KBD_MOD_CTRL) {
+            insert_reference();
+            return;
+        }
+        break;
+    case KBD_KEY_ESC:
+        A.state = S_LOOKUP;
         return;
     default:
         break;
     }
-    search_clamp();
+    pv_clamp();
 }
 
 /* ---- clock ----------------------------------------------------------------------------- */
@@ -399,9 +564,8 @@ static void render_list(void)
     ui_list(rows, A.nnotes, A.list_sel, A.list_top);
 }
 
-static void render_search(void)
+static void fill_hits(ui_hit_t *hits)
 {
-    static ui_hit_t hits[MAX_NOTES];
     const time_t now = time(NULL);
     for (size_t i = 0; i < A.search.n; i++) {
         const note_hit_t *h = &A.search.res[i];
@@ -411,6 +575,12 @@ static void render_search(void)
         hits[i].hl_off = h->hl_off;
         hits[i].hl_len = h->hl_len;
     }
+}
+
+static void render_search(void)
+{
+    static ui_hit_t hits[MAX_NOTES];
+    fill_hits(hits);
     ui_search(A.search.q, hits, A.search.n, A.search.sel, A.search.top);
 }
 
@@ -446,6 +616,17 @@ static void render(void)
     }
     case S_SEARCH:
         render_search();
+        break;
+    case S_LOOKUP: {
+        static ui_hit_t hits[MAX_NOTES];
+        render_editor();  /* the draft stays visible behind the panel */
+        ui_dim();
+        fill_hits(hits);
+        ui_lookup(A.search.q, hits, A.search.n, A.search.sel, A.search.top);
+        break;
+    }
+    case S_PREVIEW:
+        ui_preview(A.pv.title, A.search.q, A.search.sel + 1, A.search.n, A.pv.meta, &A.pv.ed);
         break;
     case S_CLOCK:
         ui_clock(A.clk.v[0], A.clk.v[1], A.clk.v[2], A.clk.v[3], A.clk.v[4], A.clk.field,
@@ -548,8 +729,10 @@ static void key_editor(const kbd_event_t *ev)
     if ((ev->mods & KBD_MOD_CTRL) && ev->key == KBD_KEY_CHAR) {
         if (ev->ch == 's') {
             save_now();
+        } else if (ev->ch == 'k') {
+            open_lookup();
         }
-        return;  /* Ctrl+K look-up is not built yet */
+        return;
     }
 
     switch (ev->key) {
@@ -635,6 +818,12 @@ static void handle_key(const kbd_event_t *ev)
     case S_SEARCH:
         key_search(ev);
         break;
+    case S_LOOKUP:
+        key_lookup(ev);
+        break;
+    case S_PREVIEW:
+        key_preview(ev);
+        break;
     case S_CLOCK:
         key_clock(ev);
         break;
@@ -651,7 +840,7 @@ static void tick(void)
         save_now();
         A.dirty_screen = true;
     }
-    if (A.state == S_SEARCH && A.search.pending &&
+    if ((A.state == S_SEARCH || A.state == S_LOOKUP) && A.search.pending &&
         now_ms() - A.search.last_key_ms >= SEARCH_DELAY_MS) {
         run_search();
         A.dirty_screen = true;
@@ -677,6 +866,17 @@ void app_run(void)
         return;
     }
     ed_init(&A.ed, buf, BUF_CAP, UI_EDITOR_TEXT_W, ui_editor_advance, NULL);
+
+    /* a second buffer for the read-only preview; without it Look up still works but cannot preview */
+    A.pv.buf = heap_caps_malloc(BUF_CAP, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (!A.pv.buf) {
+        A.pv.buf = malloc(BUF_CAP);
+    }
+    if (A.pv.buf) {
+        ed_init(&A.pv.ed, A.pv.buf, BUF_CAP, UI_EDITOR_TEXT_W, ui_editor_advance, NULL);
+    } else {
+        ESP_LOGW(TAG, "no memory for the preview buffer");
+    }
 
     ESP_ERROR_CHECK(gfx_init());
     const st7305_config_t lcd = {

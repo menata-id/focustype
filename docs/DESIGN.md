@@ -28,8 +28,8 @@ it, the geometry and behaviour are recorded here and in `components/ui/ui.c`.
 | B4 | Save failed banner | built (text generic, mockup says microSD) | `ui_editor`, `save_now` |
 | C1 | Search from Home | built to the mockup (Find label, 5 rows with a snippet and the match bold and underlined); rendered on the host only, not yet seen on the board. Full text, ASCII case-insensitive. Status before the date ("Draft ·") is missing: needs metadata | `ui_search`, `key_search`, `notes_search` |
 | C2 | All writing | built (no Details yet) | `ui_list`, `key_list` |
-| D1 | Ctrl+K inside a note | not built | |
-| D2 | Read-only preview, Ctrl+Enter inserts a reference | not built | |
+| D1 | Ctrl+K inside a note | built to the mockup (panel over the dimmed draft); rendered on the host only, not yet seen on the panel | `ui_dim`, `ui_lookup`, `key_lookup` |
+| D2 | Read-only preview, Ctrl+Enter inserts a reference | built to the mockup; rendered on the host only. The mockup does not say what a reference looks like: it inserts `[[Title]]` at the cursor (my choice). The created date in the info line is missing (no metadata): it shows `edited <date> · N words` | `ui_preview`, `key_preview`, `insert_reference` |
 | E1 | Details & actions (status, category, tags, flag, export, archive) | not built | needs metadata storage |
 | E2 | Rename (title is metadata only, text never changes) | not built | needs metadata storage |
 | F1 | Device status (battery shows "Not calibrated" until verified) | not built | needs ADC, RTC |
@@ -57,7 +57,9 @@ it, the geometry and behaviour are recorded here and in `components/ui/ui.c`.
 | Search | typing and Backspace edit the query (results update 250 ms after the last key), Up/Down select, Enter open, Esc home |
 | Set clock | Left/Right (or Tab) field, Up/Down change, PgUp/PgDn change by 10, Enter set, Esc cancel |
 | All writing | Up/Down, PgUp/PgDn, Enter open, Esc home |
-| Editor | typing, Enter, Backspace, Delete, arrows, Home/End, PgUp/PgDn, Ctrl+S save, Esc save-and-leave |
+| Look up (Ctrl+K in the editor) | typing and Backspace edit the query, Up/Down select, Enter preview, Esc back to the draft (saved first) |
+| Preview | Up/Down scroll one line, PgUp/PgDn one page, Home/End, Ctrl+Enter insert `[[Title]]` and return to the draft, Esc back to the results |
+| Editor | Ctrl+K look up, typing, Enter, Backspace, Delete, arrows, Home/End, PgUp/PgDn, Ctrl+S save, Esc save-and-leave |
 | Save failed | Ctrl+S retry, Esc keep writing |
 
 ## Planned storage for metadata (not implemented)

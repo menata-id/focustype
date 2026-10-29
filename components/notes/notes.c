@@ -10,6 +10,7 @@
 #include "editor.h"
 #include "fsutil.h"
 #include "notes.h"
+#include "textfind.h"
 
 #define DIR_MAX 96
 #define MAX_IDS 256
@@ -158,24 +159,6 @@ int notes_list(note_info_t *out, size_t max, size_t *count)
     return 0;
 }
 
-/* Offset of the first case-insensitive match, or (size_t)-1. */
-static size_t find_nocase(const char *text, size_t len, const char *needle, size_t nlen)
-{
-    if (nlen == 0 || nlen > len) {
-        return (size_t)-1;
-    }
-    for (size_t i = 0; i + nlen <= len; i++) {
-        size_t j = 0;
-        while (j < nlen && tolower((unsigned char)text[i + j]) == tolower((unsigned char)needle[j])) {
-            j++;
-        }
-        if (j == nlen) {
-            return i;
-        }
-    }
-    return (size_t)-1;
-}
-
 #define SNIPPET_BEFORE 24
 #define SNIPPET_AFTER  48
 #define ELLIPSIS       "\xE2\x80\xA6"
@@ -243,8 +226,8 @@ int notes_search(const char *query, note_hit_t *out, size_t max, size_t *count)
         if (notes_load(ids[i], &text, &len) != 0) {
             continue;
         }
-        const size_t pos = find_nocase(text, len, query, qlen);
-        if (pos != (size_t)-1 && fill_info(ids[i], &out[k].info) == 0) {
+        const size_t pos = tf_find_nocase(text, len, query, qlen);
+        if (pos != TF_NOT_FOUND && fill_info(ids[i], &out[k].info) == 0) {
             make_snippet(text, len, pos, qlen, &out[k]);
             k++;
         }

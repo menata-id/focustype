@@ -20,7 +20,7 @@ test_editor: test_editor.c ../../components/editor/editor.c ../../components/uti
 	$(CC) $(CFLAGS) $(INC) -o $@ $^
 
 test_notes: test_notes.c ../../components/notes/notes.c ../../components/fsutil/fsutil.c \
-            ../../components/editor/editor.c ../../components/util/utf8.c
+            ../../components/editor/editor.c ../../components/util/utf8.c ../../components/util/textfind.c
 	$(CC) $(CFLAGS) -D_DEFAULT_SOURCE $(INC) -o $@ $^
 
 test_format: test_format.c ../../components/ui/ui_format.c

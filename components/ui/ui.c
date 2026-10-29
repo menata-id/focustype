@@ -4,6 +4,7 @@
 #include "gfx.h"
 #include "gfx_fonts.h"
 #include "gfx_text.h"
+#include "textfind.h"
 #include "ui.h"
 #include "utf8.h"
 
@@ -185,15 +186,21 @@ static void footer_clear(void)
     gfx_hline(0, FTR_Y, GFX_W, true);
 }
 
-static void footer(const hint_t *hints, size_t n)
+static void footer_at(int x0, int y, int w, int h, const hint_t *hints, size_t n, int pad)
 {
-    footer_clear();
-    const int mid = FTR_Y + 1 + (FTR_H - 1) / 2;
-    int x = MARGIN_X;
+    gfx_fill_rect(x0, y, w, h, false);
+    gfx_hline(x0, y, w, true);
+    const int mid = y + 1 + (h - 1) / 2;
+    int x = x0 + pad;
     for (size_t i = 0; i < n; i++) {
         x += keycap(x, mid, hints[i].key, true) + 4;
         x += draw(&font_plex_sans_12, x, mid - 7, 14, hints[i].label, true) + 14;
     }
+}
+
+static void footer(const hint_t *hints, size_t n)
+{
+    footer_at(0, FTR_Y, GFX_W, FTR_H, hints, n, MARGIN_X);
 }
 
 /* ---- Home ------------------------------------------------------------------------------ */
@@ -384,6 +391,33 @@ static void snippet_line(const ui_hit_t *h, int x, int y_top, int max_w, bool in
     }
 }
 
+/* One search result: title and date on the first line, the snippet on the second. The row is
+ * 2 * pad_y + 33 px tall; the selected one is filled. */
+static void hit_row(const ui_hit_t *h, int x0, int w, int y, int pad_x, int pad_y, bool selected, bool first)
+{
+    const int row_h = 2 * pad_y + 33;
+    if (selected) {
+        gfx_fill_rect(x0, y, w, row_h, true);
+    } else {
+        if (first) {
+            gfx_hline(x0, y, w, true);
+        }
+        gfx_hline(x0, y + row_h - 1, w, true);
+    }
+    const bool ink = !selected;
+    const int when_w = text_w(&font_plex_sans_12, h->when);
+    int tx = x0 + pad_x;
+    if (selected) {
+        triangle_right(tx, y + pad_y + (18 - 10) / 2, 10, false);
+        tx += 14;
+    }
+    char title[64];
+    fit(&font_plex_sans_15_bold, h->title, x0 + w - tx - pad_x - when_w - 8, title, sizeof(title));
+    draw(&font_plex_sans_15_bold, tx, y + pad_y, 18, title, ink);
+    draw_right(&font_plex_sans_12, x0 + w - pad_x, y + pad_y, 18, h->when, ink);
+    snippet_line(h, x0 + pad_x, y + pad_y + 18, w - 2 * pad_x, ink);
+}
+
 void ui_search(const char *query, const ui_hit_t *hits, size_t n, size_t sel, size_t top)
 {
     gfx_clear(false);
@@ -411,29 +445,7 @@ void ui_search(const char *query, const ui_hit_t *hits, size_t n, size_t sel, si
     }
 
     for (size_t i = top, row = 0; i < n && row < UI_SEARCH_PAGE; i++, row++) {
-        const int y = SEARCH_ROWS_Y + (int)row * SEARCH_ROW_H;
-        const bool selected = i == sel;
-        if (selected) {
-            gfx_fill_rect(0, y, GFX_W, SEARCH_ROW_H, true);
-        } else {
-            if (row == 0) {
-                gfx_hline(0, y, GFX_W, true);
-            }
-            gfx_hline(0, y + SEARCH_ROW_H - 1, GFX_W, true);
-        }
-        const bool ink = !selected;
-        const int when_w = text_w(&font_plex_sans_12, hits[i].when);
-        int tx = MARGIN_X;
-        if (selected) {
-            triangle_right(tx, y + 4 + (18 - 10) / 2, 10, false);
-            tx += 14;
-        }
-        char title[64];
-        fit(&font_plex_sans_15_bold, hits[i].title, GFX_W - tx - MARGIN_X - when_w - 8, title,
-            sizeof(title));
-        draw(&font_plex_sans_15_bold, tx, y + 4, 18, title, ink);
-        draw_right(&font_plex_sans_12, GFX_W - MARGIN_X, y + 4, 18, hits[i].when, ink);
-        snippet_line(&hits[i], MARGIN_X, y + 4 + 18, GFX_W - 2 * MARGIN_X, ink);
+        hit_row(&hits[i], 0, GFX_W, SEARCH_ROWS_Y + (int)row * SEARCH_ROW_H, MARGIN_X, 4, i == sel, row == 0);
     }
 
     static const hint_t hints[] = {{"\xE2\x86\x91\xE2\x86\x93", "Select"}, {"Enter", "Open to edit"}, {"Esc", "Home"}};
@@ -548,6 +560,132 @@ void ui_editor(ed_t *e, const char *title, ui_save_t save, const char *saved_tim
 }
 
 /* ---- Keyboard not detected ------------------------------------------------------------- */
+
+/* ---- Look up (D1) ---------------------------------------------------------------------- */
+
+#define LK_X     14
+#define LK_Y     12
+#define LK_W     (GFX_W - 14 - 18)
+#define LK_H     (GFX_H - 12 - 16)
+#define LK_HDR_H 24
+#define LK_FTR_H 22
+#define LK_ROW_H 39
+
+/* Keeps every other pixel (a checkerboard of paper), so what is drawn next to it reads as the background. */
+void ui_dim(void)
+{
+    uint8_t *fb = gfx_buffer();
+    for (int y = 0; y < GFX_H; y++) {
+        const uint8_t keep = (y & 1) ? 0xAA : 0x55;
+        for (int i = 0; i < GFX_W / 8; i++) {
+            fb[y * (GFX_W / 8) + i] &= keep;
+        }
+    }
+}
+
+void ui_lookup(const char *query, const ui_hit_t *hits, size_t n, size_t sel, size_t top)
+{
+    gfx_fill_rect(LK_X + 4, LK_Y + 4, LK_W, LK_H, true);  /* hard shadow */
+    gfx_fill_rect(LK_X, LK_Y, LK_W, LK_H, false);
+    gfx_rect(LK_X, LK_Y, LK_W, LK_H, 2, true);
+
+    const int ix = LK_X + 2, iw = LK_W - 4;
+    int y = LK_Y + 2;
+    draw(&font_plex_sans_13_bold, ix + 10, y, LK_HDR_H, "Look up \xC2\xB7 draft kept", true);
+    if (query[0]) {
+        char right[24];
+        snprintf(right, sizeof(right), "%lu %s", (unsigned long)n, n == 1 ? "result" : "results");
+        draw_right(&font_plex_sans_13, ix + iw - 10, y, LK_HDR_H, right, true);
+    }
+    gfx_hline(ix, y + LK_HDR_H, iw, true);
+    y += LK_HDR_H + 1;
+
+    const int fy = y + 6;
+    const int lw = draw(&font_plex_sans_12_semibold, ix + 10, fy, SEARCH_FIND_H, "Find", true);
+    const int bx = ix + 10 + lw + 8, bw = ix + iw - 10 - bx;
+    gfx_rect(bx, fy, bw, SEARCH_FIND_H, 3, true);
+    char shown[64];
+    fit(&font_plex_mono_15, query, bw - 6 - 6 - 4, shown, sizeof(shown));
+    const int tw = draw(&font_plex_mono_15, bx + 6, fy, SEARCH_FIND_H, shown, true);
+    gfx_fill_rect(bx + 6 + tw + 1, fy + 6, 2, SEARCH_FIND_H - 12, true);
+    const int y0 = fy + SEARCH_FIND_H + 6;
+
+    if (query[0] == '\0') {
+        draw(&font_plex_sans_12, ix + 10, y0 + 8, 15, "Type to look through your other writing.", true);
+    } else if (n == 0) {
+        draw(&font_plex_sans_15_semibold, ix + 10, y0 + 8, 19, "Nothing found", true);
+    }
+    for (size_t i = top, row = 0; i < n && row < UI_LOOKUP_PAGE; i++, row++) {
+        hit_row(&hits[i], ix, iw, y0 + (int)row * LK_ROW_H, 10, 3, i == sel, row == 0);
+    }
+
+    static const hint_t hints[] = {{"\xE2\x86\x91\xE2\x86\x93", "Select"}, {"Enter", "Preview"}, {"Esc", "Back to draft"}};
+    footer_at(ix, LK_Y + LK_H - 2 - LK_FTR_H, iw, LK_FTR_H, hints, 3, 10);
+}
+
+/* ---- Read-only preview (D2) ------------------------------------------------------------ */
+
+#define PV_TEXT_Y 50
+
+/* A text line in the editor font with every match of q drawn in the medium weight and underlined. */
+static void marked_line(const char *s, size_t len, int x, int y, const char *q, size_t qlen)
+{
+    const gfx_font_t *rf = &font_plex_mono_17, *mf = &font_plex_mono_17_medium;
+    const int base = baseline(rf, y, ED_LINE_H);
+    size_t i = 0;
+    while (i < len) {
+        const size_t m = tf_find_nocase(s + i, len - i, q, qlen);
+        const size_t seg = m == TF_NOT_FOUND ? len - i : m;
+        x = gfx_draw_text(rf, x, base, s + i, seg, true);
+        i += seg;
+        if (m == TF_NOT_FOUND) {
+            break;
+        }
+        const int mx = x;
+        x = gfx_draw_text(mf, x, base, s + i, qlen, true);
+        gfx_hline(mx, base + 2, x - mx, true);
+        i += qlen;
+    }
+}
+
+void ui_preview(const char *title, const char *query, size_t pos, size_t total, const char *meta, ed_t *e)
+{
+    gfx_clear(false);
+    header_frame();
+
+    const gfx_font_t *cf = &font_plex_sans_12_semibold;
+    const int chip_w = text_w(cf, "READ") + 12 + 8;
+    gfx_fill_rect(0, 0, chip_w, HDR_H - 2, true);
+    draw(cf, 12, 0, HDR_H - 2, "READ", false);
+
+    char q[24], right[48];
+    fit(&font_plex_sans_13, query, 90, q, sizeof(q));
+    snprintf(right, sizeof(right), "\xE2\x80\x9C%s\xE2\x80\x9D %lu/%lu", q, (unsigned long)pos, (unsigned long)total);
+    draw_right(&font_plex_sans_13, GFX_W - MARGIN_X, 0, HDR_H - 2, right, true);
+    char shown[64];
+    fit(&font_plex_sans_13_bold, title, GFX_W - MARGIN_X - text_w(&font_plex_sans_13, right) - 8 - chip_w - 8,
+        shown, sizeof(shown));
+    draw(&font_plex_sans_13_bold, chip_w + 8, 0, HDR_H - 2, shown, true);
+
+    draw(&font_plex_sans_12, MARGIN_X, HDR_H + 4, 16, meta, true);
+
+    const size_t nlines = ed_line_count(e);
+    const size_t qlen = strlen(query);
+    for (int i = 0; i < UI_PREVIEW_LINES; i++) {
+        const size_t li = e->top_line + (size_t)i;
+        if (li >= nlines) {
+            break;
+        }
+        const char *s;
+        size_t len;
+        ed_line(e, li, &s, &len);
+        marked_line(s, len, MARGIN_X, PV_TEXT_Y + i * ED_LINE_H, query, qlen);
+    }
+    scrollbar(GFX_W - 6, PV_TEXT_Y, FTR_Y - PV_TEXT_Y - 8, nlines, UI_PREVIEW_LINES, e->top_line);
+
+    static const hint_t hints[] = {{"\xE2\x86\x91\xE2\x86\x93", "Scroll"}, {"Ctrl+Enter", "Insert reference"}, {"Esc", "Results"}};
+    footer(hints, 3);
+}
 
 /* ---- Set clock ------------------------------------------------------------------------- */
 

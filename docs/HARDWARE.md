@@ -55,8 +55,9 @@ FAQ; not yet verified on the board):**
 - The chip has its own backup input, net `RTC_BAT`, on the PH1.0 header for a rechargeable cell.
 - **Tested 2026-10-29: with no RTC cell fitted the chip loses the time every time USB is unplugged**
   (the app shows Set clock at each boot). So the RTC is not fed from the 18650/USB while the board is
-  off, or not at all with the switch off. Not tested with the 18650 fitted and the switch off, and not
-  tested with a cell fitted. To keep the time, fit a rechargeable PH1.0 RTC cell (check its voltage
+  off. **Also tested 2026-10-29 with the 18650 fitted: after switching the board off and on again the time
+  was still lost**, so the 18650 does not keep the RTC alive while the board is off. Not tested with an RTC
+  cell fitted. To keep the time, fit a rechargeable PH1.0 RTC cell (check its voltage
   and polarity against the Waveshare accessory page before buying; never a non-rechargeable CR cell).
 
 **microSD:** SDMMC 1-bit, CLK 38, CMD 21, D0 39, taken from Waveshare's `esp-idf/06_SD_Card` example

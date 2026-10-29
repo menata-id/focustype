@@ -50,7 +50,8 @@ clock; `pcf_set` writes the chip and the system clock). Register logic is in `pc
 `test_pcf`. The Set clock screen (`ui_clock`, state `S_CLOCK`) opens at boot if the chip lost its time, or
 with Ctrl+T on Home. Verified on the board: setting the time works. **The time is lost on every unplug
 because no RTC cell is fitted**, see `docs/HARDWARE.md`; this is hardware, not a bug. Until a cell is
-fitted, Set clock appears at each boot (Esc skips it, the system clock then stays at 1970). The component
+fitted (the 18650 does not help, tested), Set clock appears at each boot; its starting values are the firmware build
+time (`__DATE__`/`__TIME__`), not a real clock (Esc skips it, the system clock then stays at 1970). The component
 is named `pcf85063` because ESP-IDF already owns `rtc.h` and `rtc_init`.
 
 **2026-10-29 fixes.** Saving failed on every note because `CONFIG_FATFS_LFN_NONE` (8.3 names only) rejects the

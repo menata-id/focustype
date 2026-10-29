@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-27 (first flash; panel and app verified; USB keyboard ruled out, BLE chosen). Read this first.
+Last updated: 2026-10-29 (USB keyboard works with a powered OTG adapter; saving notes verified; SD pins from the Waveshare example, untested). Read this first.
 
 ## 1. Where things stand
 
@@ -10,9 +10,9 @@ Last updated: 2026-10-27 (first flash; panel and app verified; USB keyboard rule
 | Framebuffer, drawing, text (`components/gfx`) | yes | yes | no | font output previewed as an image |
 | Fonts (`tools/gen_fonts.py`) | yes | n/a | no | rendered preview looked right |
 | Editor core (`components/editor`) | yes | yes | no | wrap/cursor logic ported to Python against the test expectations |
-| Notes store, atomic save (`notes`, `fsutil`) | yes | yes | no | host test passes |
-| USB keyboard (`components/usb_kbd`) | yes | yes | no | host test passes |
-| Storage mount (`components/storage`) | yes | yes | no | none |
+| Notes store, atomic save (`notes`, `fsutil`) | yes | yes | yes (2026-10-29: typed text saves and survives reset, on internal flash) | host test passes |
+| USB keyboard (`components/usb_kbd`) | yes | yes | yes (2026-10-29: mechanical keyboard through a powered OTG adapter is detected and types) | host test passes |
+| Storage mount (`components/storage`) | yes | yes | flash fallback yes; microSD not confirmed | SD pins 38/21/39 (1-bit SDMMC) from Waveshare `esp-idf/06_SD_Card`, not yet checked against the schematic |
 | Screens (`components/ui`) | 4 of 14 | yes | no | none, never rendered |
 | App state machine (`main/app.c`) | yes | yes | no | none |
 
@@ -39,6 +39,11 @@ anything. Current `sdkconfig` was generated with `sdkconfig.usbhost` (UART0 cons
 the previous one is `sdkconfig.bak-before-usbhost`.
 Compiled means only that it compiles: the `usb_host_hid` calls, SPI behavior and all UI are unverified.
 Use `. ~/esp/esp-idf/export.sh` in each new shell.
+
+**2026-10-29 fixes.** Saving failed on every note because `CONFIG_FATFS_LFN_NONE` (8.3 names only) rejects the
+atomic-save temp file `ft-0001.txt.tmp`. `sdkconfig.defaults` now sets `CONFIG_FATFS_LFN_HEAP=y`; verified on the
+board. The microSD was not detected because `FT_SD_PIN_*` were `-1`; they are now set from the Waveshare example.
+Whether the card mounts is still to be confirmed (needs UART0 log or reading the card on a laptop).
 
 ## 2. Do this first
 

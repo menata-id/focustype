@@ -26,9 +26,10 @@
 #define FT_PIN_I2C_SDA    13
 #define FT_PIN_I2C_SCL    14
 
-/* microSD: UNKNOWN. -1 makes storage_mount() return ESP_ERR_NOT_SUPPORTED. */
-#define FT_SD_PIN_CLK     (-1)
-#define FT_SD_PIN_CMD     (-1)
-#define FT_SD_PIN_D0      (-1)
+/* microSD, SDMMC 1-bit. Source: Waveshare example esp-idf/06_SD_Card (sdcard_bsp.h defaults).
+ * Not yet checked against the schematic. -1 makes storage_mount() fall back to internal flash. */
+#define FT_SD_PIN_CLK     38
+#define FT_SD_PIN_CMD     21
+#define FT_SD_PIN_D0      39
 
 /* Native USB (GPIO19 = D-, GPIO20 = D+) is used as host PHY for the keyboard. */

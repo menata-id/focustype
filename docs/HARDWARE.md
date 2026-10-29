@@ -69,6 +69,13 @@ cell that is happy at about 3 V (3 V lithium-manganese rechargeable type such as
 non-rechargeable cell or a 3.7 V LiPo is wrong. Pin 1/2 polarity of J7 was not legible in the text; check
 with a multimeter on a powered board (RTC_BAT side is the one near the diode) before connecting.
 
+**RTC cell, from the Waveshare FAQ (https://docs.waveshare.com/ESP32-S3-RLCD-4.2/FAQ):** use a secondary
+(rechargeable) lithium cell, recommended model **ML1220** or a compatible 3 V/3.3 V rechargeable coin cell.
+Do not use non-rechargeable coin cells such as CR1220: they can be damaged or damage the circuit while the
+board charges the cell. This matches the schematic reading above. The FAQ calls it a "battery holder" while
+the schematic shows a 2-pin SH1.0 connector, so a bare ML1220 may need a lead or adapter; check the real
+connector before buying.
+
 **microSD:** SDMMC 1-bit, CLK 38, CMD 21, D0 39, taken from Waveshare's `esp-idf/06_SD_Card` example
 (`sdcard_bsp.h` defaults). Not yet checked against the schematic. Mounting not yet confirmed.
 

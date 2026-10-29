@@ -48,6 +48,19 @@ int main(void)
     ui_format_when(0, now, out, sizeof(out));
     CHECK(out[0] == '\0');
 
+    ui_format_date(utc(2026, 10, 20, 9, 0), out, sizeof(out));
+    CHECK(strcmp(out, "20 Oct") == 0);
+    ui_format_date(0, out, sizeof(out));
+    CHECK(strcmp(out, "\xE2\x80\x94") == 0);
+    ui_format_stamp(utc(2026, 10, 27, 2, 34), now, out, sizeof(out));
+    CHECK(strcmp(out, "Today 02:34") == 0);
+    ui_format_stamp(utc(2026, 10, 26, 21, 40), now, out, sizeof(out));
+    CHECK(strcmp(out, "Yest. 21:40") == 0);
+    ui_format_stamp(utc(2026, 10, 12, 9, 5), now, out, sizeof(out));
+    CHECK(strcmp(out, "12 Oct 09:05") == 0);
+    ui_format_stamp(1000, now, out, sizeof(out));  /* clock never set */
+    CHECK(strcmp(out, "\xE2\x80\x94") == 0);
+
     printf(failures ? "test_format: %d failure(s)\n" : "test_format: ok\n", failures);
     return failures != 0;
 }

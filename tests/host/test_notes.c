@@ -118,8 +118,45 @@ int main(void)
     CHECK(hits[0].hl_len == 6 && strncasecmp(sn + hits[0].hl_off, "Needle", 6) == 0);
     CHECK(notes_remove("ft-0009") == 0);
 
+    /* metadata: a manual title replaces the first line in listings; the text is untouched */
+    note_meta_t mm;
+    CHECK(notes_meta_load("ft-0001", &mm) == 1 && mm.status == 0 && mm.title[0] == '\0');
+    mm.status = 2;
+    mm.flag = true;
+    mm.created = 1793284325;
+    strcpy(mm.title, "My own title");
+    strcpy(mm.tags, "#x");
+    CHECK(notes_meta_save("ft-0001", &mm) == 0);
+    note_meta_t back;
+    CHECK(notes_meta_load("ft-0001", &back) == 0 && back.status == 2 && back.flag && strcmp(back.title, "My own title") == 0);
+    CHECK(notes_list(list, 8, &n) == 0);
+    int found = 0;
+    for (size_t i = 0; i < n; i++) {
+        if (strcmp(list[i].id, "ft-0001") == 0) {
+            found = 1;
+            CHECK(strcmp(list[i].title, "My own title") == 0 && strcmp(list[i].auto_title, "Replaced") == 0);
+            CHECK(list[i].meta.flag && list[i].meta.status == 2);
+        }
+    }
+    CHECK(found && n == 4);  /* ft-0001, 0002, 0007, 0008: a .meta file is not a note */
+    CHECK(notes_load("ft-0001", &text, &len) == 0 && strcmp(text, "Replaced") == 0);
+    free(text);
+    CHECK(notes_search("replaced", hits, 8, &n) == 0 && n == 1 && strcmp(hits[0].info.title, "My own title") == 0);
+    /* an empty manual title falls back to the first line */
+    mm.title[0] = '\0';
+    CHECK(notes_meta_save("ft-0001", &mm) == 0);
+    CHECK(notes_list(list, 8, &n) == 0);
+    for (size_t i = 0; i < n; i++) {
+        if (strcmp(list[i].id, "ft-0001") == 0) {
+            CHECK(strcmp(list[i].title, "Replaced") == 0);
+        }
+    }
+
     /* remove */
+    CHECK(notes_meta_save(id2, &mm) == 0);
     CHECK(notes_remove(id2) == 0);
+    snprintf(tmp, sizeof(tmp), "%s/%s.meta", dir, id2);
+    CHECK(access(tmp, F_OK) != 0);
     CHECK(notes_list(list, 8, &n) == 0 && n == 3);  /* ft-0001, ft-0007, ft-0008 */
 
     char cmd[200];

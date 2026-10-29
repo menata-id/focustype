@@ -47,6 +47,13 @@ may feel slow on a large SD card. Each hit shows a snippet around the first matc
 (`note_hit_t`, snippet logic host-tested incl. UTF-8 cuts). The screen was also rendered on the host and viewed as an
 image, but not on the panel.
 
+**2026-10-29 Metadata, Details and Rename (E1/E2).** `<id>.meta` sidecar files (see `docs/DESIGN.md`, "Metadata
+storage"), read by `notes_list`/`notes_search`/`notes_info`, written by `notes_meta_save`. The Details screen, the Rename,
+Change status, Tags & category and Archive panels, and status/flag in the lists are built. Host-tested logic (`test_meta`,
+`test_notes`, `test_format`); screens rendered on the host and viewed as images; **not yet run on the board**. Known
+limits: Export to card is only a notice; metadata is lost if a `.meta` file is deleted by hand (the note is unaffected);
+input in the text fields is ASCII only (the keyboard path only produces ASCII).
+
 **2026-10-29 Look up (D1/D2).** Ctrl+K in the editor saves the draft and opens a panel over the dimmed editor
 (`ui_dim` keeps a checkerboard of pixels); Enter previews a hit read-only in a second 64 KB buffer
 (`A.pv`), Ctrl+Enter inserts `[[Title]]` at the cursor, Esc steps back. The note being written is hidden from

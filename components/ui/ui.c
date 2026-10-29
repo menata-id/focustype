@@ -127,6 +127,15 @@ static void triangle_right(int x, int y, int h, bool ink)
     }
 }
 
+/* A small pennant on a pole, 9 x 11 px, top-left at (x, y). Replaces the unavailable flag glyph. */
+static void flag_icon(int x, int y, bool ink)
+{
+    gfx_vline(x, y, 11, ink);
+    for (int r = 0; r < 6; r++) {
+        gfx_hline(x + 1, y + r, 8 - r, ink);
+    }
+}
+
 static void cross(int x, int y, int s, bool ink)
 {
     for (int i = 0; i < s; i++) {
@@ -330,7 +339,14 @@ static void list_rows(const ui_row_t *rows, size_t n, size_t sel, size_t top, in
         }
         draw(tf, tx, y + 5, 19, shown, ink);
         draw_right(&font_plex_sans_12, w - MARGIN_X, y + 5, 19, rows[i].when, ink);
-        draw(&font_plex_sans_12, MARGIN_X, y + 5 + 19 + 1, 15, rows[i].sub, ink);
+        int sx = MARGIN_X;
+        if (rows[i].flag) {
+            flag_icon(sx, y + 5 + 19 + 3, ink);
+            sx += 13;
+        }
+        char sub[96];
+        fit(&font_plex_sans_12, rows[i].sub, w - MARGIN_X - sx, sub, sizeof(sub));
+        draw(&font_plex_sans_12, sx, y + 5 + 19 + 1, 15, sub, ink);
     }
 
 }
@@ -405,7 +421,10 @@ static void hit_row(const ui_hit_t *h, int x0, int w, int y, int pad_x, int pad_
         gfx_hline(x0, y + row_h - 1, w, true);
     }
     const bool ink = !selected;
-    const int when_w = text_w(&font_plex_sans_12, h->when);
+    int when_w = text_w(&font_plex_sans_12, h->when);
+    if (h->flag) {
+        when_w += 13;
+    }
     int tx = x0 + pad_x;
     if (selected) {
         triangle_right(tx, y + pad_y + (18 - 10) / 2, 10, false);
@@ -415,6 +434,9 @@ static void hit_row(const ui_hit_t *h, int x0, int w, int y, int pad_x, int pad_
     fit(&font_plex_sans_15_bold, h->title, x0 + w - tx - pad_x - when_w - 8, title, sizeof(title));
     draw(&font_plex_sans_15_bold, tx, y + pad_y, 18, title, ink);
     draw_right(&font_plex_sans_12, x0 + w - pad_x, y + pad_y, 18, h->when, ink);
+    if (h->flag) {
+        flag_icon(x0 + w - pad_x - when_w, y + pad_y + 3, ink);
+    }
     snippet_line(h, x0 + pad_x, y + pad_y + 18, w - 2 * pad_x, ink);
 }
 
@@ -685,6 +707,193 @@ void ui_preview(const char *title, const char *query, size_t pos, size_t total, 
 
     static const hint_t hints[] = {{"\xE2\x86\x91\xE2\x86\x93", "Scroll"}, {"Ctrl+Enter", "Insert reference"}, {"Esc", "Results"}};
     footer(hints, 3);
+}
+
+/* ---- Details (E1) ---------------------------------------------------------------------- */
+
+#define DT_LEFT_W  168
+#define DT_ITEM_H  31
+
+static void dashed_hline(int x, int y, int w, bool ink)
+{
+    for (int i = 0; i < w; i += 4) {
+        gfx_hline(x + i, y, w - i < 2 ? w - i : 2, ink);
+    }
+}
+
+void ui_details(const ui_detail_t *d, int sel)
+{
+    gfx_clear(false);
+    header(&font_plex_sans_13_bold, d->title, &font_plex_sans_13, "Details");
+
+    /* facts */
+    const gfx_font_t *lf = &font_plex_sans_12, *bf = &font_plex_sans_12_semibold;
+    struct {
+        const char *label;
+        const char *value;
+        const gfx_font_t *font;
+        bool flag_icon;
+    } rows[] = {
+        {"Status", d->status, bf, false},
+        {"Category", d->category[0] ? d->category : "\xE2\x80\x94", bf, false},
+        {"Tags", d->tags[0] ? d->tags : "\xE2\x80\x94", bf, false},
+        {"Flag", d->flag ? "Flagged" : "\xE2\x80\x94", lf, d->flag},
+        {"Created", d->created, lf, false},
+        {"Edited", d->edited, lf, false},
+        {"Length", d->length, lf, false},
+        {"ID", d->id, &font_plex_mono_15, false},
+    };
+    int label_w = 0;
+    for (size_t i = 0; i < sizeof(rows) / sizeof(rows[0]); i++) {
+        const int w = text_w(lf, rows[i].label);
+        label_w = w > label_w ? w : label_w;
+    }
+    const int vx = 12 + label_w + 8;
+    for (size_t i = 0; i < sizeof(rows) / sizeof(rows[0]); i++) {
+        const int y = BODY_Y + 10 + (int)i * 21;
+        draw(lf, 12, y, 16, rows[i].label, true);
+        int x = vx;
+        if (rows[i].flag_icon) {
+            flag_icon(x, y + 3, true);
+            x += 13;
+        }
+        char val[64];
+        fit(rows[i].font, rows[i].value, DT_LEFT_W - 10 - x, val, sizeof(val));
+        draw(rows[i].font, x, y, 16, val, true);
+    }
+    gfx_vline(DT_LEFT_W, BODY_Y, FTR_Y - BODY_Y, true);
+
+    /* actions */
+    static const char *const names[UI_DETAIL_ITEMS] = {"Continue writing", "Rename", "Change status",
+                                                       "Tags & category", "Flag", "Export to card", "Archive\xE2\x80\xA6"};
+    const int ax = DT_LEFT_W + 1, aw = GFX_W - ax;
+    int y = BODY_Y + 8;
+    for (int i = 0; i < UI_DETAIL_ITEMS; i++) {
+        if (i == UI_DETAIL_ITEMS - 1) {
+            y += 4;
+            if (i != sel) {
+                dashed_hline(ax, y, aw, true);
+            }
+        }
+        const bool selected = i == sel;
+        const gfx_font_t *f = selected ? &font_plex_sans_15_bold : &font_plex_sans_15_semibold;
+        if (selected) {
+            gfx_fill_rect(ax, y, aw, DT_ITEM_H, true);
+        }
+        int tx = ax + 12;
+        if (selected) {
+            triangle_right(tx, y + (DT_ITEM_H - 10) / 2, 10, false);
+            tx += 14;
+        }
+        const char *label = names[i];
+        if (i == UI_DETAIL_ITEMS - 1 && d->archived) {
+            label = "Unarchive\xE2\x80\xA6";
+        }
+        draw(f, tx, y, DT_ITEM_H, label, !selected);
+        y += DT_ITEM_H;
+    }
+
+    static const hint_t hints[] = {{"\xE2\x86\x91\xE2\x86\x93", "Select"}, {"Enter", "Do"}, {"Esc", "List"}};
+    footer(hints, 3);
+}
+
+/* ---- Panels over a dimmed screen (E2 Rename and the other Details actions) -------------- */
+
+#define PN_X   20
+#define PN_Y   48
+#define PN_W   (GFX_W - 20 - 24)
+#define PN_HDR 24
+#define PN_FTR 22
+
+/* Draws the shadow, frame, header and footer for a body of body_h px; returns the body's top y. */
+static int panel_frame(const char *title, int body_h, const hint_t *hints, size_t nhints)
+{
+    const int h = 2 + PN_HDR + 1 + body_h + PN_FTR + 2;
+    gfx_fill_rect(PN_X + 4, PN_Y + 4, PN_W, h, true);
+    gfx_fill_rect(PN_X, PN_Y, PN_W, h, false);
+    gfx_rect(PN_X, PN_Y, PN_W, h, 2, true);
+    draw(&font_plex_sans_13_bold, PN_X + 2 + 10, PN_Y + 2, PN_HDR, title, true);
+    gfx_hline(PN_X + 2, PN_Y + 2 + PN_HDR, PN_W - 4, true);
+    footer_at(PN_X + 2, PN_Y + h - 2 - PN_FTR, PN_W - 4, PN_FTR, hints, nhints, 10);
+    return PN_Y + 2 + PN_HDR + 1;
+}
+
+/* The end of `s` that fits in max_w, so what is being typed stays visible. */
+static const char *tail_fit(const gfx_font_t *f, const char *s, int max_w)
+{
+    const size_t len = strlen(s);
+    size_t start = 0;
+    while (start < len && text_w(f, s + start) > max_w) {
+        start++;
+        while (start < len && ((unsigned char)s[start] & 0xC0) == 0x80) {
+            start++;
+        }
+    }
+    return s + start;
+}
+
+void ui_panel_form(const char *title, const ui_field_t *fields, size_t n, size_t active,
+                   const char *note, const char *enter_label)
+{
+    const int inner_w = PN_W - 4 - 20;
+    const int note_lines = note ? paragraph(&font_plex_sans_12, 0, 0, inner_w, 16, note, false, false) : 0;
+    const int body_h = 10 + (int)n * (15 + 5 + 30) + (int)(n - 1) * 8 + (note ? 5 + note_lines * 16 : 0) + 8;
+
+    char enter_hint[24];
+    snprintf(enter_hint, sizeof(enter_hint), "%s", enter_label);
+    const hint_t hints_one[] = {{"Enter", enter_hint}, {"Esc", "Cancel"}};
+    const hint_t hints_many[] = {{"\xE2\x86\x91\xE2\x86\x93", "Field"}, {"Enter", enter_hint}, {"Esc", "Cancel"}};
+    int y = panel_frame(title, body_h, n > 1 ? hints_many : hints_one, n > 1 ? 3 : 2) + 10;
+
+    for (size_t i = 0; i < n; i++) {
+        const bool on = i == active;
+        draw(&font_plex_sans_12_semibold, PN_X + 2 + 10, y, 15, fields[i].label, true);
+        y += 15 + 5;
+        const int bx = PN_X + 2 + 10;
+        gfx_rect(bx, y, inner_w, 30, on ? 3 : 1, true);
+        const char *shown = tail_fit(&font_plex_mono_15, fields[i].value, inner_w - 6 - 6 - 4);
+        const int tw = draw(&font_plex_mono_15, bx + 6, y, 30, shown, true);
+        if (on) {
+            gfx_fill_rect(bx + 6 + tw + 1, y + 7, 2, 16, true);
+        }
+        y += 30 + 8;
+    }
+    if (note) {
+        y -= 8;
+        paragraph(&font_plex_sans_12, PN_X + 2 + 10, y + 5, inner_w, 16, note, true, true);
+    }
+}
+
+void ui_panel_pick(const char *title, const char *const *items, size_t n, size_t sel)
+{
+    static const hint_t hints[] = {{"\xE2\x86\x91\xE2\x86\x93", "Select"}, {"Enter", "Set"}, {"Esc", "Cancel"}};
+    int y = panel_frame(title, 8 + (int)n * 26 + 8, hints, 3) + 8;
+    for (size_t i = 0; i < n; i++, y += 26) {
+        const bool on = i == sel;
+        if (on) {
+            gfx_fill_rect(PN_X + 2, y, PN_W - 4, 26, true);
+        }
+        int tx = PN_X + 2 + 10;
+        if (on) {
+            triangle_right(tx, y + 8, 10, false);
+            tx += 14;
+        }
+        draw(on ? &font_plex_sans_15_bold : &font_plex_sans_15_semibold, tx, y, 26, items[i], !on);
+    }
+}
+
+void ui_panel_message(const char *title, const char *text, const char *enter_label, const char *esc_label)
+{
+    const int inner_w = PN_W - 4 - 20;
+    const int lines = paragraph(&font_plex_sans_13, 0, 0, inner_w, 18, text, false, false);
+    hint_t hints[2];
+    size_t nh = 0;
+    if (enter_label) {
+        hints[nh++] = (hint_t){"Enter", enter_label};
+    }
+    hints[nh++] = (hint_t){"Esc", esc_label};
+    const int y = panel_frame(title, 10 + lines * 18 + 10, hints, nh) + 10;
+    paragraph(&font_plex_sans_13, PN_X + 2 + 10, y, inner_w, 18, text, true, true);
 }
 
 /* ---- Set clock ------------------------------------------------------------------------- */

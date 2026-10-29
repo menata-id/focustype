@@ -30,8 +30,8 @@ it, the geometry and behaviour are recorded here and in `components/ui/ui.c`.
 | C2 | All writing | built (no Details yet) | `ui_list`, `key_list` |
 | D1 | Ctrl+K inside a note | built to the mockup (panel over the dimmed draft); rendered on the host only, not yet seen on the panel | `ui_dim`, `ui_lookup`, `key_lookup` |
 | D2 | Read-only preview, Ctrl+Enter inserts a reference | built to the mockup; rendered on the host only. The mockup does not say what a reference looks like: it inserts `[[Title]]` at the cursor (my choice). The created date in the info line is missing (no metadata): it shows `edited <date> · N words` | `ui_preview`, `key_preview`, `insert_reference` |
-| E1 | Details & actions (status, category, tags, flag, export, archive) | not built | needs metadata storage |
-| E2 | Rename (title is metadata only, text never changes) | not built | needs metadata storage |
+| E1 | Details & actions | built to the mockup, rendered on the host only, not yet seen on the panel. Open with Right on a row of All writing (or on a Search result). Sub-screens the mockup does not draw are my own design, built from the Rename panel style: Change status (pick one of Draft, Developing, Revising, Done), Tags & category (two fields), Archive/Unarchive confirmation, Export message | `ui_details`, `ui_panel_*`, `key_detail` |
+| E2 | Rename (title is metadata only, text never changes) | built to the mockup (panel over the dimmed Details), host render only | `ui_panel_form`, `key_detail` |
 | F1 | Device status (battery shows "Not calibrated" until verified) | not built | needs ADC, RTC |
 | F2 | Keyboard not detected | built | `ui_kbd_error` |
 
@@ -59,11 +59,22 @@ it, the geometry and behaviour are recorded here and in `components/ui/ui.c`.
 | All writing | Up/Down, PgUp/PgDn, Enter open, Esc home |
 | Look up (Ctrl+K in the editor) | typing and Backspace edit the query, Up/Down select, Enter preview, Esc back to the draft (saved first) |
 | Preview | Up/Down scroll one line, PgUp/PgDn one page, Home/End, Ctrl+Enter insert `[[Title]]` and return to the draft, Esc back to the results |
+| Details | Up/Down select, Enter do, Esc back to where it was opened from. Panels: type and Backspace in text fields, Up/Down/Tab switch field, Enter save, Esc cancel |
 | Editor | Ctrl+K look up, typing, Enter, Backspace, Delete, arrows, Home/End, PgUp/PgDn, Ctrl+S save, Esc save-and-leave |
 | Save failed | Ctrl+S retry, Esc keep writing |
 
-## Planned storage for metadata (not implemented)
+## Metadata storage (implemented)
 
-Notes stay plain `.txt`. Status, category, tags, flag, manual title and created time would go in a
-sidecar `ft-NNNN.meta` (small key=value or JSON) written atomically with `fs_save_atomic`, so the
-text file is never touched by metadata edits.
+Notes stay plain `.txt`. Status, category, tags, flag, manual title, archived and created time live in a
+sidecar `ft-NNNN.meta` (`key=value` lines, unknown keys ignored), written atomically with `fs_save_atomic`, so the
+text file is never touched by metadata edits. See `components/notes/include/note_meta.h`; host test `test_meta`.
+
+Decisions that are mine, not the mockup's:
+- Statuses: Draft (the default), Developing, Revising, Done.
+- A tag is stored as `#word`; typing `foo, bar` gives `#foo #bar`.
+- Archive hides a note from All writing and the Home shortcut. Search and Look up still find it, and Right on a
+  Search result opens its Details, where the action reads "Unarchive". Nothing is deleted.
+- Created time is written at the first save, only if the clock has been set (2025 or later). Older notes show a dash.
+- Export to card only explains: the notes already live on the card, or no card is in use. Nothing is copied.
+- All writing and Search rows show "Status · #tags · words" and "Status · date"; a flagged note shows a drawn flag
+  shape (the font has no flag glyph).

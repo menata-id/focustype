@@ -128,7 +128,9 @@ static int fill_info(const char *id, note_info_t *info)
         }
     }
     fclose(f);
-    ed_title_from(head, head_len, info->title, sizeof(info->title));
+    ed_title_from(head, head_len, info->auto_title, sizeof(info->auto_title));
+    notes_meta_load(id, &info->meta);
+    snprintf(info->title, sizeof(info->title), "%s", info->meta.title[0] ? info->meta.title : info->auto_title);
     return 0;
 }
 
@@ -238,6 +240,11 @@ int notes_search(const char *query, note_hit_t *out, size_t max, size_t *count)
     return 0;
 }
 
+int notes_info(const char *id, note_info_t *out)
+{
+    return fill_info(id, out);
+}
+
 int notes_new_id(char id[NOTE_ID_LEN])
 {
     static char ids[MAX_IDS][NOTE_ID_LEN];
@@ -265,6 +272,35 @@ int notes_load(const char *id, char **text, size_t *len)
     return fs_load(path, text, len);
 }
 
+int notes_meta_load(const char *id, note_meta_t *m)
+{
+    char path[DIR_MAX + NOTE_ID_LEN + 16];
+    note_meta_defaults(m);
+    if (make_path(id, ".meta", path, sizeof(path)) != 0) {
+        return -1;
+    }
+    char *text = NULL;
+    size_t len = 0;
+    const int rc = fs_load(path, &text, &len);
+    if (rc != 0) {
+        return rc == FS_NOT_FOUND ? 1 : -1;
+    }
+    note_meta_parse(text, len, m);
+    free(text);
+    return 0;
+}
+
+int notes_meta_save(const char *id, const note_meta_t *m)
+{
+    char path[DIR_MAX + NOTE_ID_LEN + 16];
+    char buf[320];
+    const size_t n = note_meta_format(m, buf, sizeof(buf));
+    if (n == 0 || make_path(id, ".meta", path, sizeof(path)) != 0) {
+        return -1;
+    }
+    return fs_save_atomic(path, buf, n);
+}
+
 int notes_save(const char *id, const char *text, size_t len)
 {
     char path[DIR_MAX + NOTE_ID_LEN + 16];
@@ -281,8 +317,11 @@ int notes_remove(const char *id)
         return -1;
     }
     unlink(path);
-    if (make_path(id, ".txt.tmp", path, sizeof(path)) == 0) {
-        unlink(path);
+    static const char *const others[] = {".txt.tmp", ".meta", ".meta.tmp"};
+    for (size_t i = 0; i < sizeof(others) / sizeof(others[0]); i++) {
+        if (make_path(id, others[i], path, sizeof(path)) == 0) {
+            unlink(path);
+        }
     }
     return 0;
 }

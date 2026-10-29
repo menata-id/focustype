@@ -32,6 +32,39 @@ void ui_format_when(time_t t, time_t now, char *out, size_t cap)
     }
 }
 
+#define CLOCK_SET_AFTER 1735689600  /* 2025-01-01: earlier times mean the clock was never set */
+
+void ui_format_date(time_t t, char *out, size_t cap)
+{
+    if (t < CLOCK_SET_AFTER) {
+        snprintf(out, cap, "%s", "\xE2\x80\x94");
+        return;
+    }
+    struct tm tm;
+    localtime_r(&t, &tm);
+    snprintf(out, cap, "%d %s", tm.tm_mday, k_months[tm.tm_mon % 12]);
+}
+
+void ui_format_stamp(time_t t, time_t now, char *out, size_t cap)
+{
+    if (t < CLOCK_SET_AFTER) {
+        snprintf(out, cap, "%s", "\xE2\x80\x94");
+        return;
+    }
+    struct tm tt, today, yesterday;
+    const time_t yday = now - 24 * 60 * 60;
+    localtime_r(&t, &tt);
+    localtime_r(&now, &today);
+    localtime_r(&yday, &yesterday);
+    if (same_day(&tt, &today)) {
+        snprintf(out, cap, "Today %02d:%02d", tt.tm_hour, tt.tm_min);
+    } else if (same_day(&tt, &yesterday)) {
+        snprintf(out, cap, "Yest. %02d:%02d", tt.tm_hour, tt.tm_min);
+    } else {
+        snprintf(out, cap, "%d %s %02d:%02d", tt.tm_mday, k_months[tt.tm_mon % 12], tt.tm_hour, tt.tm_min);
+    }
+}
+
 void ui_format_words(uint32_t n, char *out, size_t cap)
 {
     char digits[16];

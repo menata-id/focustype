@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <time.h>
 
+#include "note_meta.h"
+
 /*
  * Notes stored as plain UTF-8 files, one per note: <dir>/ft-0001.txt. Titles, word counts and
  * dates are derived from the files, so there is no index to corrupt. Saves are atomic
@@ -14,9 +16,11 @@
 
 typedef struct {
     char id[NOTE_ID_LEN];   /* "ft-0001" */
-    char title[64];
+    char title[64];         /* what to show: the manual title if there is one, else auto_title */
+    char auto_title[64];    /* from the first line of the text */
     uint32_t words;
     time_t mtime;
+    note_meta_t meta;       /* defaults if the note has no .meta file */
 } note_info_t;
 
 /* Sets the directory (created if missing). Returns 0 on success. */
@@ -25,11 +29,19 @@ int notes_init(const char *dir);
 /* Lists notes, newest first. Returns 0 on success; *count is the number written (<= max). */
 int notes_list(note_info_t *out, size_t max, size_t *count);
 
+/* Facts about one note, as notes_list() reports them. Returns 0, or -1 if the note does not exist. */
+int notes_info(const char *id, note_info_t *out);
+
 /* Allocates the next free id. The file is created by the first notes_save(). */
 int notes_new_id(char id[NOTE_ID_LEN]);
 
 /* Loads a note into a malloc'd NUL-terminated buffer (caller frees). Returns 1 if missing. */
 int notes_load(const char *id, char **text, size_t *len);
+
+/* Metadata beside the text (<id>.meta). Load fills the defaults and returns 1 when there is no file.
+ * Save is atomic. The text file is never touched. */
+int notes_meta_load(const char *id, note_meta_t *m);
+int notes_meta_save(const char *id, const note_meta_t *m);
 
 /* Atomically saves a note. Returns 0 on success. */
 int notes_save(const char *id, const char *text, size_t len);

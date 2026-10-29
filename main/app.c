@@ -32,13 +32,14 @@ static const char *TAG = "app";
 
 #define BUF_CAP        (64 * 1024)
 #define MAX_NOTES      64
+#define CLOCK_SET_AFTER 1735689600  /* 2025-01-01: earlier means the clock was never set */
 #define AUTOSAVE_MS    3000
 #define KBD_WAIT_MS    5000
 #define SEARCH_DELAY_MS 250   /* wait after the last keystroke before scanning the notes */
 #define QUERY_MAX      48
 #define NOTES_DIR      STORAGE_MOUNT_POINT "/notes"
 
-typedef enum { S_HOME, S_LIST, S_EDITOR, S_KBD_ERR, S_CLOCK, S_SEARCH, S_LOOKUP, S_PREVIEW } state_t;
+typedef enum { S_HOME, S_LIST, S_EDITOR, S_KBD_ERR, S_CLOCK, S_SEARCH, S_LOOKUP, S_PREVIEW, S_DETAIL } state_t;
 
 static struct {
     state_t state, prev_state;
@@ -50,6 +51,7 @@ static struct {
 
     ed_t ed;
     char cur_id[NOTE_ID_LEN];
+    char cur_title[64];      /* manual title of the open note; empty = first line */
     bool cur_new;
     ui_save_t save;
     time_t saved_at;
@@ -64,6 +66,19 @@ static struct {
         bool pending;        /* the query changed and the results are stale */
         int64_t last_key_ms;
     } search;
+
+    struct {
+        char id[NOTE_ID_LEN];
+        note_info_t info;        /* refreshed after every change */
+        state_t from;            /* S_LIST or S_SEARCH: where Esc goes */
+        int sel;                 /* highlighted action */
+        enum { P_NONE, P_RENAME, P_STATUS, P_TAGS, P_ARCHIVE, P_MSG } panel;
+        char input[2][64];       /* Rename: [0] title. Tags & category: [0] category, [1] tags */
+        size_t field;
+        int pick;                /* highlighted status */
+        char msg_title[32];
+        char msg[200];
+    } det;
 
     struct {
         ed_t ed;             /* the note being previewed; top_line is the scroll position */
@@ -106,6 +121,14 @@ static void refresh_notes(void)
     if (notes_list(A.notes, MAX_NOTES, &n) != 0) {
         n = 0;
     }
+    /* archived notes leave All writing and the Home shortcut; Search still finds them */
+    size_t k = 0;
+    for (size_t i = 0; i < n; i++) {
+        if (!A.notes[i].meta.archived) {
+            A.notes[k++] = A.notes[i];
+        }
+    }
+    n = k;
     A.nnotes = n;
     if (A.list_sel >= n) {
         A.list_sel = n ? n - 1 : 0;
@@ -136,12 +159,16 @@ static void open_note(const char *id, bool is_new)
     A.cur_new = is_new;
     A.saved_at = 0;
     A.save = UI_SAVED;
+    A.cur_title[0] = '\0';
 
     if (is_new) {
         ed_set_text(&A.ed, "", 0);
     } else {
         char *text = NULL;
         size_t len = 0;
+        note_meta_t meta;
+        notes_meta_load(id, &meta);
+        snprintf(A.cur_title, sizeof(A.cur_title), "%s", meta.title);
         if (notes_load(id, &text, &len) == 0 && ed_set_text(&A.ed, text, len)) {
             for (size_t i = 0; i < A.nnotes; i++) {
                 if (strcmp(A.notes[i].id, id) == 0) {
@@ -176,6 +203,16 @@ static bool save_now(void)
         return true;
     }
     if (notes_save(A.cur_id, A.ed.buf, A.ed.len) == 0) {
+        if (A.cur_new) {
+            /* first save: remember when the note was started (only if the clock has been set) */
+            note_meta_t meta;
+            notes_meta_load(A.cur_id, &meta);
+            const time_t now = time(NULL);
+            if (meta.created == 0 && now >= CLOCK_SET_AFTER) {
+                meta.created = now;
+                notes_meta_save(A.cur_id, &meta);
+            }
+        }
         A.save = UI_SAVED;
         A.saved_at = time(NULL);
         A.cur_new = false;
@@ -202,6 +239,7 @@ static void show_kbd_error(void)
 /* ---- search ---------------------------------------------------------------------------- */
 
 static void edited(void);
+static void open_details(const char *id, state_t from);
 
 static void reset_search(size_t page)
 {
@@ -306,6 +344,14 @@ static void key_search(const kbd_event_t *ev)
         }
         if (A.search.n > 0) {
             open_note(A.search.res[A.search.sel].info.id, false);
+        }
+        break;
+    case KBD_KEY_RIGHT:  /* Details, e.g. to unarchive a note Search found */
+        if (A.search.pending) {
+            run_search();
+        }
+        if (A.search.n > 0) {
+            open_details(A.search.res[A.search.sel].info.id, S_SEARCH);
         }
         break;
     case KBD_KEY_ESC:
@@ -429,6 +475,186 @@ static void key_preview(const kbd_event_t *ev)
         break;
     }
     pv_clamp();
+}
+
+/* ---- details, rename and the other note actions ----------------------------------------- */
+
+#define DET_ITEMS UI_DETAIL_ITEMS
+
+static void det_reload(void)
+{
+    if (notes_info(A.det.id, &A.det.info) != 0) {
+        return;
+    }
+    if (A.det.from == S_SEARCH && A.search.sel < A.search.n) {
+        A.search.res[A.search.sel].info = A.det.info;  /* the results show the new title and status */
+    }
+}
+
+static void open_details(const char *id, state_t from)
+{
+    snprintf(A.det.id, sizeof(A.det.id), "%s", id);
+    A.det.from = from;
+    A.det.sel = 0;
+    A.det.panel = P_NONE;
+    det_reload();
+    A.state = S_DETAIL;
+}
+
+static void det_message(const char *title, const char *text)
+{
+    snprintf(A.det.msg_title, sizeof(A.det.msg_title), "%s", title);
+    snprintf(A.det.msg, sizeof(A.det.msg), "%s", text);
+    A.det.panel = P_MSG;
+}
+
+/* Saves changed metadata and re-reads the note; tells the user if the card refused it. */
+static void det_apply(const note_meta_t *m)
+{
+    if (notes_meta_save(A.det.id, m) != 0) {
+        det_message("Can't write to storage", "The change was not saved. Check the card, then try again.");
+        return;
+    }
+    A.det.panel = P_NONE;
+    det_reload();
+}
+
+static void trim(char *s)
+{
+    size_t len = strlen(s);
+    while (len > 0 && s[len - 1] == ' ') {
+        s[--len] = '\0';
+    }
+    size_t lead = 0;
+    while (s[lead] == ' ') {
+        lead++;
+    }
+    memmove(s, s + lead, len - lead + 1);
+}
+
+static void det_action(int item)
+{
+    note_meta_t m = A.det.info.meta;
+    switch (item) {
+    case 0:
+        open_note(A.det.id, false);
+        break;
+    case 1:
+        snprintf(A.det.input[0], sizeof(A.det.input[0]), "%s", A.det.info.title);
+        A.det.panel = P_RENAME;
+        break;
+    case 2:
+        A.det.pick = m.status < NOTE_STATUS_COUNT ? m.status : 0;
+        A.det.panel = P_STATUS;
+        break;
+    case 3:
+        snprintf(A.det.input[0], sizeof(A.det.input[0]), "%s", m.category);
+        snprintf(A.det.input[1], sizeof(A.det.input[1]), "%s", m.tags);
+        A.det.field = 0;
+        A.det.panel = P_TAGS;
+        break;
+    case 4:
+        m.flag = !m.flag;
+        det_apply(&m);
+        break;
+    case 5:
+        det_message("Export to card", storage_on_sd()
+            ? "Your notes are already stored on the microSD card, so there is nothing to export."
+            : "No microSD card is in use. Insert a card and restart the device; notes written meanwhile stay in the internal memory.");
+        break;
+    case 6:
+        A.det.panel = P_ARCHIVE;
+        break;
+    }
+}
+
+static void det_text_key(const kbd_event_t *ev, size_t nfields)
+{
+    static const size_t caps[2][2] = {{63, 0}, {23, 47}};  /* [Rename or Tags][field] */
+    const size_t cap = caps[nfields > 1 ? 1 : 0][A.det.field];
+    char *in = A.det.input[A.det.field];
+    const size_t len = strlen(in);
+    if (ev->key == KBD_KEY_CHAR && !(ev->mods & KBD_MOD_CTRL) && (unsigned char)ev->ch >= 0x20 &&
+        (unsigned char)ev->ch < 0x7F && len < cap) {
+        in[len] = ev->ch;
+        in[len + 1] = '\0';
+    } else if (ev->key == KBD_KEY_BACKSPACE && len > 0) {
+        in[len - 1] = '\0';
+    } else if (nfields > 1 && (ev->key == KBD_KEY_UP || ev->key == KBD_KEY_DOWN || ev->key == KBD_KEY_TAB)) {
+        A.det.field = (A.det.field + 1) % nfields;
+    }
+}
+
+static void key_detail(const kbd_event_t *ev)
+{
+    note_meta_t m = A.det.info.meta;
+    switch (A.det.panel) {
+    case P_NONE:
+        if (ev->key == KBD_KEY_UP && A.det.sel > 0) {
+            A.det.sel--;
+        } else if (ev->key == KBD_KEY_DOWN && A.det.sel + 1 < DET_ITEMS) {
+            A.det.sel++;
+        } else if (ev->key == KBD_KEY_ENTER) {
+            det_action(A.det.sel);
+        } else if (ev->key == KBD_KEY_ESC) {
+            if (A.det.from == S_LIST) {
+                refresh_notes();
+                list_clamp();
+            }
+            A.state = A.det.from;
+        }
+        return;
+    case P_RENAME:
+        if (ev->key == KBD_KEY_ENTER) {
+            trim(A.det.input[0]);
+            /* empty, or the same as the first line: back to the automatic title */
+            const bool auto_title = A.det.input[0][0] == '\0' || strcmp(A.det.input[0], A.det.info.auto_title) == 0;
+            snprintf(m.title, sizeof(m.title), "%s", auto_title ? "" : A.det.input[0]);
+            det_apply(&m);
+        } else if (ev->key == KBD_KEY_ESC) {
+            A.det.panel = P_NONE;
+        } else {
+            det_text_key(ev, 1);
+        }
+        return;
+    case P_TAGS:
+        if (ev->key == KBD_KEY_ENTER) {
+            trim(A.det.input[0]);
+            snprintf(m.category, sizeof(m.category), "%.*s", (int)sizeof(m.category) - 1, A.det.input[0]);
+            note_tags_normalize(A.det.input[1], m.tags, sizeof(m.tags));
+            det_apply(&m);
+        } else if (ev->key == KBD_KEY_ESC) {
+            A.det.panel = P_NONE;
+        } else {
+            det_text_key(ev, 2);
+        }
+        return;
+    case P_STATUS:
+        if (ev->key == KBD_KEY_UP && A.det.pick > 0) {
+            A.det.pick--;
+        } else if (ev->key == KBD_KEY_DOWN && A.det.pick + 1 < NOTE_STATUS_COUNT) {
+            A.det.pick++;
+        } else if (ev->key == KBD_KEY_ENTER) {
+            m.status = (uint8_t)A.det.pick;
+            det_apply(&m);
+        } else if (ev->key == KBD_KEY_ESC) {
+            A.det.panel = P_NONE;
+        }
+        return;
+    case P_ARCHIVE:
+        if (ev->key == KBD_KEY_ENTER) {
+            m.archived = !m.archived;
+            det_apply(&m);
+        } else if (ev->key == KBD_KEY_ESC) {
+            A.det.panel = P_NONE;
+        }
+        return;
+    case P_MSG:
+        if (ev->key == KBD_KEY_ESC || ev->key == KBD_KEY_ENTER) {
+            A.det.panel = P_NONE;
+        }
+        return;
+    }
 }
 
 /* ---- clock ----------------------------------------------------------------------------- */
@@ -557,20 +783,36 @@ static void render_list(void)
     static ui_row_t rows[MAX_NOTES];
     const time_t now = time(NULL);
     for (size_t i = 0; i < A.nnotes; i++) {
-        snprintf(rows[i].title, sizeof(rows[i].title), "%s", A.notes[i].title);
-        ui_format_when(A.notes[i].mtime, now, rows[i].when, sizeof(rows[i].when));
-        ui_format_words(A.notes[i].words, rows[i].sub, sizeof(rows[i].sub));
+        const note_info_t *n = &A.notes[i];
+        char words[24];
+        snprintf(rows[i].title, sizeof(rows[i].title), "%s", n->title);
+        ui_format_when(n->mtime, now, rows[i].when, sizeof(rows[i].when));
+        ui_format_words(n->words, words, sizeof(words));
+        rows[i].flag = n->meta.flag;
+        snprintf(rows[i].sub, sizeof(rows[i].sub), "%s%s%s \xC2\xB7 %s",
+                 n->meta.flag ? "Flagged" : note_status_names[n->meta.status % NOTE_STATUS_COUNT],
+                 n->meta.tags[0] ? " \xC2\xB7 " : "", n->meta.tags, words);
     }
     ui_list(rows, A.nnotes, A.list_sel, A.list_top);
 }
 
-static void fill_hits(ui_hit_t *hits)
+static void fill_hits(ui_hit_t *hits, bool with_status)
 {
     const time_t now = time(NULL);
     for (size_t i = 0; i < A.search.n; i++) {
         const note_hit_t *h = &A.search.res[i];
         snprintf(hits[i].title, sizeof(hits[i].title), "%s", h->info.title);
-        ui_format_when(h->info.mtime, now, hits[i].when, sizeof(hits[i].when));
+        char when[16];
+        ui_format_when(h->info.mtime, now, when, sizeof(when));
+        if (!with_status) {
+            snprintf(hits[i].when, sizeof(hits[i].when), "%s", when);
+        } else if (h->info.meta.flag) {
+            snprintf(hits[i].when, sizeof(hits[i].when), "\xC2\xB7 %s", when);  /* the flag shape goes before it */
+        } else {
+            snprintf(hits[i].when, sizeof(hits[i].when), "%s \xC2\xB7 %s",
+                     note_status_names[h->info.meta.status % NOTE_STATUS_COUNT], when);
+        }
+        hits[i].flag = with_status && h->info.meta.flag;
         snprintf(hits[i].snippet, sizeof(hits[i].snippet), "%s", h->snippet);
         hits[i].hl_off = h->hl_off;
         hits[i].hl_len = h->hl_len;
@@ -580,14 +822,73 @@ static void fill_hits(ui_hit_t *hits)
 static void render_search(void)
 {
     static ui_hit_t hits[MAX_NOTES];
-    fill_hits(hits);
+    fill_hits(hits, true);
     ui_search(A.search.q, hits, A.search.n, A.search.sel, A.search.top);
+}
+
+static void render_detail(void)
+{
+    const note_info_t *n = &A.det.info;
+    ui_detail_t d;
+    memset(&d, 0, sizeof(d));
+    snprintf(d.title, sizeof(d.title), "%s", n->title);
+    snprintf(d.status, sizeof(d.status), "%s", note_status_names[n->meta.status % NOTE_STATUS_COUNT]);
+    snprintf(d.category, sizeof(d.category), "%s", n->meta.category);
+    snprintf(d.tags, sizeof(d.tags), "%s", n->meta.tags);
+    d.flag = n->meta.flag;
+    d.archived = n->meta.archived;
+    ui_format_date(n->meta.created, d.created, sizeof(d.created));
+    ui_format_stamp(n->mtime, time(NULL), d.edited, sizeof(d.edited));
+    ui_format_words(n->words, d.length, sizeof(d.length));
+    snprintf(d.id, sizeof(d.id), "%s", n->id);
+    ui_details(&d, A.det.sel);
+
+    if (A.det.panel == P_NONE) {
+        return;
+    }
+    ui_dim();
+    switch (A.det.panel) {
+    case P_RENAME: {
+        const ui_field_t f[] = {{"Title", A.det.input[0]}};
+        ui_panel_form("Rename", f, 1, 0,
+                      "Only the title changes \xE2\x80\x94 the text stays as written. Leave empty to use the first line again.",
+                      "Save title");
+        break;
+    }
+    case P_TAGS: {
+        const ui_field_t f[] = {{"Category", A.det.input[0]}, {"Tags", A.det.input[1]}};
+        ui_panel_form("Tags & category", f, 2, A.det.field, "Separate tags with spaces.", "Save");
+        break;
+    }
+    case P_STATUS:
+        ui_panel_pick("Change status", note_status_names, NOTE_STATUS_COUNT, (size_t)A.det.pick);
+        break;
+    case P_ARCHIVE:
+        if (n->meta.archived) {
+            ui_panel_message("Unarchive this note?", "It returns to All writing and the Home shortcut.", "Unarchive", "Cancel");
+        } else {
+            ui_panel_message("Archive this note?",
+                             "It leaves All writing and the Home shortcut but stays on the card. Search still finds it, "
+                             "and you can unarchive it from Details.",
+                             "Archive", "Cancel");
+        }
+        break;
+    case P_MSG:
+        ui_panel_message(A.det.msg_title, A.det.msg, NULL, "Close");
+        break;
+    case P_NONE:
+        break;
+    }
 }
 
 static void render_editor(void)
 {
     char title[64], when[16];
-    ed_title(&A.ed, title, sizeof(title));
+    if (A.cur_title[0]) {
+        snprintf(title, sizeof(title), "%s", A.cur_title);
+    } else {
+        ed_title(&A.ed, title, sizeof(title));
+    }
     hhmm(A.saved_at, when, sizeof(when));
     const bool failed = A.save == UI_SAVE_FAILED;
     ui_editor(&A.ed, title, A.save, A.cur_new && A.saved_at == 0 ? "" : when,
@@ -621,10 +922,13 @@ static void render(void)
         static ui_hit_t hits[MAX_NOTES];
         render_editor();  /* the draft stays visible behind the panel */
         ui_dim();
-        fill_hits(hits);
+        fill_hits(hits, false);
         ui_lookup(A.search.q, hits, A.search.n, A.search.sel, A.search.top);
         break;
     }
+    case S_DETAIL:
+        render_detail();
+        break;
     case S_PREVIEW:
         ui_preview(A.pv.title, A.search.q, A.search.sel + 1, A.search.n, A.pv.meta, &A.pv.ed);
         break;
@@ -707,6 +1011,11 @@ static void key_list(const kbd_event_t *ev)
     case KBD_KEY_ENTER:
         if (A.nnotes > 0) {
             open_note(A.notes[A.list_sel].id, false);
+        }
+        return;
+    case KBD_KEY_RIGHT:
+        if (A.nnotes > 0) {
+            open_details(A.notes[A.list_sel].id, S_LIST);
         }
         return;
     case KBD_KEY_ESC:
@@ -823,6 +1132,9 @@ static void handle_key(const kbd_event_t *ev)
         break;
     case S_PREVIEW:
         key_preview(ev);
+        break;
+    case S_DETAIL:
+        key_detail(ev);
         break;
     case S_CLOCK:
         key_clock(ev);

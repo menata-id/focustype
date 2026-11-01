@@ -185,6 +185,39 @@ int main(void)
     CHECK(e.top_line == 0);
     ed_free(&e);
 
+    /* word movement, word deletion, selection */
+    fresh(&e, "one two  three");
+    ed_word_left(&e);
+    CHECK(e.cursor == 9);
+    ed_word_left(&e);
+    CHECK(e.cursor == 4);
+    ed_word_right(&e);
+    CHECK(e.cursor == 9);
+    ed_word_right(&e);
+    ed_word_right(&e);
+    CHECK(e.cursor == e.len);
+    ed_delete_word_back(&e);
+    CHECK(strcmp(e.buf, "one two  ") == 0);
+    e.cursor = 0;
+    ed_delete_word_fwd(&e);
+    CHECK(strcmp(e.buf, "two  ") == 0 && e.cursor == 0);
+    ed_free(&e);
+
+    fresh(&e, "hello world");
+    e.cursor = 5;
+    ed_sel_begin(&e);
+    ed_word_right(&e);
+    ed_word_right(&e);
+    size_t a, b;
+    CHECK(ed_sel_range(&e, &a, &b) && a == 5 && b == 11);
+    ed_insert_cp(&e, 'X');  /* typing replaces the selection */
+    CHECK(strcmp(e.buf, "helloX") == 0 && !e.sel);
+    ed_select_all(&e);
+    CHECK(ed_sel_range(&e, &a, &b) && a == 0 && b == 6);
+    ed_backspace(&e);
+    CHECK(e.len == 0 && e.cursor == 0);
+    ed_free(&e);
+
     printf(failures ? "test_editor: %d failure(s)\n" : "test_editor: ok\n", failures);
     return failures != 0;
 }

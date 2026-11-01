@@ -61,7 +61,7 @@ it, the geometry and behaviour are recorded here and in `components/ui/ui.c`.
 | Look up (Ctrl+K in the editor) | typing and Backspace edit the query, Up/Down select, Enter preview, Esc back to the draft (saved first) |
 | Preview | Up/Down scroll one line, PgUp/PgDn one page, Home/End, Ctrl+Enter insert `[[Title]]` and return to the draft, Esc back to the results |
 | Details | Up/Down select, Enter do, Esc back to where it was opened from. Panels: type and Backspace in text fields, Up/Down/Tab switch field, Enter save, Esc cancel |
-| Editor | Ctrl+K look up, typing, Enter, Backspace, Delete, arrows, Home/End, PgUp/PgDn, Ctrl+S save, Esc save-and-leave |
+| Editor | Ctrl+K look up, typing, Enter, Backspace, Delete, arrows, Home/End, PgUp/PgDn, Ctrl+S save, Esc save-and-leave; Ctrl+Left/Right by word, Ctrl+Up/Down page, Ctrl+Backspace/Delete delete a word (back/forward), Shift+arrows select (Ctrl+Shift: word/page), Ctrl+A/C/X/V select all/copy/cut/paste (RAM clipboard). Built and host-tested (`test_editor`), not yet tried on the board |
 | Save failed | Ctrl+S retry, Esc keep writing |
 
 ## Metadata storage (implemented)

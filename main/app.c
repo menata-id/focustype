@@ -93,6 +93,7 @@ static struct {
         bool first_run;
     } clk;
 
+    time_t home_minute;      /* minute last drawn on Home */
     bool kbd_seen;
     bool dirty_screen;
 } A;
@@ -1033,14 +1034,112 @@ static void edited(void)
     A.last_edit_ms = now_ms();
 }
 
+/* The clipboard lives only in RAM and is shared by all notes; it is lost at power-off. */
+static struct {
+    char *text;
+    size_t len;
+} clip;
+
+static void clip_copy(void)
+{
+    size_t a, b;
+    if (!ed_sel_range(&A.ed, &a, &b)) {
+        return;
+    }
+    char *p = realloc(clip.text, b - a);
+    if (!p) {
+        return;
+    }
+    memcpy(p, A.ed.buf + a, b - a);
+    clip.text = p;
+    clip.len = b - a;
+}
+
+static void clip_paste(void)
+{
+    if (clip.len > 0) {
+        ed_insert(&A.ed, clip.text, clip.len);
+        edited();
+    }
+}
+
+/* Movement keys, with Shift extending the selection and Ctrl moving by word or page. */
+static bool editor_move(const kbd_event_t *ev)
+{
+    const bool ctrl = ev->mods & KBD_MOD_CTRL;
+    switch (ev->key) {
+    case KBD_KEY_LEFT: case KBD_KEY_RIGHT: case KBD_KEY_UP: case KBD_KEY_DOWN:
+    case KBD_KEY_HOME: case KBD_KEY_END: case KBD_KEY_PGUP: case KBD_KEY_PGDN:
+        break;
+    default:
+        return false;
+    }
+    if (ev->mods & KBD_MOD_SHIFT) {
+        ed_sel_begin(&A.ed);
+    } else {
+        ed_sel_clear(&A.ed);
+    }
+    switch (ev->key) {
+    case KBD_KEY_LEFT:
+        ctrl ? ed_word_left(&A.ed) : ed_left(&A.ed);
+        break;
+    case KBD_KEY_RIGHT:
+        ctrl ? ed_word_right(&A.ed) : ed_right(&A.ed);
+        break;
+    case KBD_KEY_UP:
+        ctrl ? ed_page_up(&A.ed, UI_EDITOR_LINES - 1) : ed_up(&A.ed);
+        break;
+    case KBD_KEY_DOWN:
+        ctrl ? ed_page_down(&A.ed, UI_EDITOR_LINES - 1) : ed_down(&A.ed);
+        break;
+    case KBD_KEY_HOME:
+        ed_home(&A.ed);
+        break;
+    case KBD_KEY_END:
+        ed_end(&A.ed);
+        break;
+    case KBD_KEY_PGUP:
+        ed_page_up(&A.ed, UI_EDITOR_LINES - 1);
+        break;
+    default:
+        ed_page_down(&A.ed, UI_EDITOR_LINES - 1);
+        break;
+    }
+    return true;
+}
+
 static void key_editor(const kbd_event_t *ev)
 {
-    if ((ev->mods & KBD_MOD_CTRL) && ev->key == KBD_KEY_CHAR) {
-        if (ev->ch == 's') {
+    const bool ctrl = ev->mods & KBD_MOD_CTRL;
+    if (ctrl && ev->key == KBD_KEY_CHAR) {
+        switch (ev->ch) {
+        case 's':
             save_now();
-        } else if (ev->ch == 'k') {
+            break;
+        case 'k':
             open_lookup();
+            break;
+        case 'a':
+            ed_select_all(&A.ed);
+            break;
+        case 'c':
+            clip_copy();
+            break;
+        case 'x':
+            clip_copy();
+            if (ed_delete_selection(&A.ed)) {
+                edited();
+            }
+            break;
+        case 'v':
+            clip_paste();
+            break;
+        default:
+            break;
         }
+        return;
+    }
+    if (editor_move(ev)) {
         return;
     }
 
@@ -1054,36 +1153,12 @@ static void key_editor(const kbd_event_t *ev)
         edited();
         break;
     case KBD_KEY_BACKSPACE:
-        ed_backspace(&A.ed);
+        ctrl ? ed_delete_word_back(&A.ed) : ed_backspace(&A.ed);
         edited();
         break;
     case KBD_KEY_DELETE:
-        ed_delete(&A.ed);
+        ctrl ? ed_delete_word_fwd(&A.ed) : ed_delete(&A.ed);
         edited();
-        break;
-    case KBD_KEY_LEFT:
-        ed_left(&A.ed);
-        break;
-    case KBD_KEY_RIGHT:
-        ed_right(&A.ed);
-        break;
-    case KBD_KEY_UP:
-        ed_up(&A.ed);
-        break;
-    case KBD_KEY_DOWN:
-        ed_down(&A.ed);
-        break;
-    case KBD_KEY_HOME:
-        ed_home(&A.ed);
-        break;
-    case KBD_KEY_END:
-        ed_end(&A.ed);
-        break;
-    case KBD_KEY_PGUP:
-        ed_page_up(&A.ed, UI_EDITOR_LINES - 1);
-        break;
-    case KBD_KEY_PGDN:
-        ed_page_down(&A.ed, UI_EDITOR_LINES - 1);
         break;
     case KBD_KEY_ESC:
         if (A.save == UI_SAVE_FAILED) {
@@ -1146,6 +1221,15 @@ static void handle_key(const kbd_event_t *ev)
 
 static void tick(void)
 {
+    /* Keep the Home clock current: redraw when the minute changes. A reflective panel holds its
+     * image without power, so one refresh a minute costs next to nothing. */
+    if (A.state == S_HOME) {
+        const time_t m = time(NULL) / 60;
+        if (m != A.home_minute) {
+            A.home_minute = m;
+            A.dirty_screen = true;
+        }
+    }
     /* Autosave a few seconds after the last edit. */
     if (A.state == S_EDITOR && A.ed.dirty && A.save == UI_UNSAVED &&
         now_ms() - A.last_edit_ms >= AUTOSAVE_MS) {

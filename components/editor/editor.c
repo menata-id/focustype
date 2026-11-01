@@ -249,6 +249,7 @@ bool ed_set_text(ed_t *e, const char *text, size_t len)
     e->cursor = len;
     e->top_line = 0;
     e->dirty = false;
+    e->sel = false;
     touch(e);
     return true;
 }
@@ -263,6 +264,7 @@ bool ed_insert(ed_t *e, const char *s, size_t len)
     if (len == 0) {
         return true;
     }
+    ed_delete_selection(e);
     if (e->len + len + 1 > e->cap) {
         return false;
     }
@@ -285,6 +287,9 @@ bool ed_insert_cp(ed_t *e, uint32_t cp)
 
 void ed_backspace(ed_t *e)
 {
+    if (ed_delete_selection(e)) {
+        return;
+    }
     if (e->cursor == 0) {
         return;
     }
@@ -299,6 +304,9 @@ void ed_backspace(ed_t *e)
 
 void ed_delete(ed_t *e)
 {
+    if (ed_delete_selection(e)) {
+        return;
+    }
     if (e->cursor >= e->len) {
         return;
     }
@@ -382,6 +390,131 @@ void ed_page_down(ed_t *e, size_t lines)
     for (size_t i = 0; i < lines; i++) {
         move_vertical(e, false);
     }
+}
+
+/* ---- words and selection --------------------------------------------------------------- */
+
+static bool ws(char c)
+{
+    return c == ' ' || c == '\n' || c == '\t' || c == '\r';
+}
+
+static size_t word_left_pos(const ed_t *e, size_t p)
+{
+    while (p > 0 && ws(e->buf[p - 1])) {
+        p--;
+    }
+    while (p > 0 && !ws(e->buf[p - 1])) {
+        p--;
+    }
+    return p;
+}
+
+static size_t word_right_pos(const ed_t *e, size_t p)
+{
+    while (p < e->len && !ws(e->buf[p])) {
+        p++;
+    }
+    while (p < e->len && ws(e->buf[p])) {
+        p++;
+    }
+    return p;
+}
+
+void ed_word_left(ed_t *e)
+{
+    e->cursor = word_left_pos(e, e->cursor);
+    e->want_x = -1;
+}
+
+void ed_word_right(ed_t *e)
+{
+    e->cursor = word_right_pos(e, e->cursor);
+    e->want_x = -1;
+}
+
+static void cut_range(ed_t *e, size_t from, size_t to)
+{
+    memmove(e->buf + from, e->buf + to, e->len - to);
+    e->len -= to - from;
+    e->cursor = from;
+    e->buf[e->len] = '\0';
+    e->dirty = true;
+    touch(e);
+}
+
+void ed_delete_word_back(ed_t *e)
+{
+    if (ed_delete_selection(e)) {
+        return;
+    }
+    const size_t p = word_left_pos(e, e->cursor);
+    if (p < e->cursor) {
+        cut_range(e, p, e->cursor);
+    }
+}
+
+void ed_delete_word_fwd(ed_t *e)
+{
+    if (ed_delete_selection(e)) {
+        return;
+    }
+    size_t p = e->cursor;
+    while (p < e->len && !ws(e->buf[p])) {
+        p++;
+    }
+    while (p < e->len && ws(e->buf[p]) && e->buf[p] != '\n') {
+        p++;  /* trailing blanks go with the word, but never join the next line */
+    }
+    if (p == e->cursor && p < e->len) {
+        p++;  /* on a newline: remove just that one */
+    }
+    if (p > e->cursor) {
+        cut_range(e, e->cursor, p);
+    }
+}
+
+void ed_sel_begin(ed_t *e)
+{
+    if (!e->sel) {
+        e->sel = true;
+        e->anchor = e->cursor;
+    }
+}
+
+void ed_sel_clear(ed_t *e)
+{
+    e->sel = false;
+}
+
+void ed_select_all(ed_t *e)
+{
+    e->sel = true;
+    e->anchor = 0;
+    e->cursor = e->len;
+    e->want_x = -1;
+}
+
+bool ed_sel_range(const ed_t *e, size_t *from, size_t *to)
+{
+    if (!e->sel || e->anchor == e->cursor) {
+        return false;
+    }
+    *from = e->anchor < e->cursor ? e->anchor : e->cursor;
+    *to = e->anchor < e->cursor ? e->cursor : e->anchor;
+    return true;
+}
+
+bool ed_delete_selection(ed_t *e)
+{
+    size_t a, b;
+    const bool had = ed_sel_range(e, &a, &b);
+    e->sel = false;
+    if (!had) {
+        return false;
+    }
+    cut_range(e, a, b);
+    return true;
 }
 
 /* ---- document facts -------------------------------------------------------------------- */

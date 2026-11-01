@@ -505,6 +505,19 @@ int ui_editor_advance(uint32_t cp, void *ctx)
     return gfx_font_advance(&font_plex_mono_17, cp);
 }
 
+/* Pixel width of the first n bytes of an editor line. */
+static int text_span_w(const char *s, size_t n)
+{
+    int w = 0;
+    size_t i = 0;
+    while (i < n) {
+        uint32_t cp;
+        i += utf8_next(s + i, n - i, &cp);
+        w += gfx_font_advance(&font_plex_mono_17, cp);
+    }
+    return w;
+}
+
 #define ED_TEXT_Y   34
 #define ED_LINE_H   22
 #define BANNER_H    68
@@ -571,6 +584,21 @@ void ui_editor(ed_t *e, const char *title, ui_save_t save, const char *saved_tim
         ed_line(e, li, &s, &len);
         const int y = ED_TEXT_Y + i * ED_LINE_H;
         gfx_draw_text(&font_plex_mono_17, MARGIN_X, baseline(&font_plex_mono_17, y, ED_LINE_H), s, len, true);
+
+        /* selection: the covered part is drawn inverted (white text on a black block) */
+        size_t sa, sb;
+        if (ed_sel_range(e, &sa, &sb)) {
+            const size_t ls = (size_t)(s - e->buf);
+            const size_t a = sa > ls ? sa : ls;
+            const size_t b = sb < ls + len ? sb : ls + len;
+            if (a < b) {
+                const int x0 = MARGIN_X + text_span_w(s, a - ls);
+                const int x1 = MARGIN_X + text_span_w(s, b - ls);
+                gfx_fill_rect(x0, y + 1, x1 - x0, ED_LINE_H - 2, true);
+                gfx_draw_text(&font_plex_mono_17, x0, baseline(&font_plex_mono_17, y, ED_LINE_H), e->buf + a,
+                              b - a, false);
+            }
+        }
     }
 
     /* B1: a brand-new note shows a placeholder after the cursor and a hint box under it */

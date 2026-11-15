@@ -19,7 +19,8 @@ R section        section  0,12,-5,90,0,180,300
 R section_battery section_battery -10,-19,-8,90,0,90,300
 R board_back     board    0,0,-8,125,0,205,300
 R plan           plan     0,-8,0,0,0,0,250
-for p in housing cover; do openscad -o "stl/$p.stl" -D "part=\"$p\"" case.scad 2>/dev/null; done
+R buttons_close  assembly 0,36,-1,75,0,200,90
+for p in housing cover buttons; do openscad -o "stl/$p.stl" -D "part=\"$p\"" case.scad 2>/dev/null; done
 
 # Clash check: the case must not intersect the board dummy. An empty result means no clash.
 out=$(openscad -o /tmp/focustype_check.stl -D 'part="check"' case.scad 2>&1 || true)
@@ -34,6 +35,13 @@ if echo "$out" | grep -qi "empty"; then
     echo "check: OK, nothing closer than 0.45 mm to the board"
 else
     echo "check: FAIL, something is closer than 0.45 mm to the board:"; echo "$out" | tail -5; exit 1
+fi
+# The pins must not touch the housing or the cover (they slide in their tunnels).
+out=$(openscad -o /tmp/focustype_check3.stl -D 'part="check_pins"' case.scad 2>&1 || true)
+if echo "$out" | grep -qi "empty"; then
+    echo "check: OK, the button pins do not touch the case"
+else
+    echo "check: FAIL, a button pin touches the case:"; echo "$out" | tail -5; exit 1
 fi
 # Worst case: a protected cell, 18.6 mm x 70 mm, must also fit the pocket.
 out=$(openscad -o /tmp/focustype_check2.stl -D 'part="check"' -D cell_d=18.6 -D cell_len=70 case.scad 2>&1 || true)

@@ -9,7 +9,7 @@
 //            the ends of the board's 4 standoffs. Take the cover off and the battery holder is open.
 // Frame: X = long side (USB-C at +X), Y = short side (buttons on the +Y edge), Z = thickness, front of the LCD at +Z.
 // Z = 0 is the back face of the PCB. Pick a part with  openscad -D 'part="housing"' case.scad
-//   housing, cover, board (board and cell, not printed), assembly, section, section_battery, plan, check, check_gap
+//   housing, cover, buttons (3 pins), board (board and cell, not printed), assembly, section, section_battery, plan, check, check_gap
 
 use <../third_party/ibm-plex/IBMPlexSans-Bold.ttf>   // the wordmark font; not installed system-wide, so load the file
 
@@ -41,6 +41,8 @@ cell_dmax = 18.6; pocket_clear = 0.5;
 usb_y = 0; usb_w = 9.6; usb_z0 = -3.25; usb_z1 = 0.91;            // on the +X edge, centred
 sd_x0 = 30.21; sd_y0 = 11.1; sd_y1 = 27.2; sd_z0 = -1.85; sd_z1 = 0.6;  // card enters from +X, contacts toward the LCD
 btn_x = [-10, 0, 10]; btn_y0 = 30.71; btn_y1 = 34.36; btn_z0 = -1.8; btn_z1 = 0.4; btn_len = 4.56;  // on the +Y edge
+// The three side switches (BOOT, PWR, KEY): body 4.55 wide to Y 33.3, then a plunger 2.0 x 1.0 mm centred on Z -0.9 whose tip is at Y 34.36 (STEP).
+btn_zc = -0.9; btn_tip_y = 34.36; btn_body_y1 = 33.3;
 hdr_x0 = -10.6; hdr_x1 = 10.4; hdr_y0 = -4.0; hdr_y1 = 2.6; hdr_z0 = -8.7;  // 2x9 header
 
 // ---- look (from the reference photo) ----
@@ -90,6 +92,17 @@ screws = [[out_x0 + boss_d / 2, 22, boss_d], [out_x0 + boss_d / 2, -22, boss_d],
 
 // The +X wall must leave room for the flex that wraps round that edge: about 1.3 mm from the PCB edge (ASSUMED, from the photo).
 // That, not the look, sets the smallest equal bezel: 5.46 (PCB beyond the active area) + 1.3 + wall = about 9 mm.
+// ---- the three buttons: printed pins that carry a press from the outside to the switch plunger ----
+btn_w = 5.0; btn_h = 2.6;      // pin cross-section
+btn_r = 1.0;                   // corner radius of the pin: about 40% of the short side, so it still reads as a rectangle but is not sharp
+btn_clear = 0.3;               // sliding clearance each side; the hole is the pin + this, with the radius grown to match (1.3)
+btn_edge = 0.45;               // round-over of the front edge of the head
+btn_head_out = 0.8;            // how far the head stands out of the wall
+btn_fl_w = 7.0; btn_fl_t = 0.40;   // flange behind the rib: stops the pin from falling out
+btn_nose_w = 3.0; btn_nose_h = 1.6;// nose that meets the plunger tip
+y_rib = pcb_y1 + 0.6;          // face of the rib the flange rests on
+y_stop = y_rib - 0.05;         // the flange stops 0.05 mm short of it, so the pin never touches the housing
+
 assert(in_x1 - pcb_x1 >= 1.3, "bezel_w is too small: less than 1.3 mm between the PCB edge and the +X wall");
 
 module rbox(x0, x1, y0, y1, z0, z1, r = 0.5) {
@@ -115,6 +128,28 @@ module xwindow(x0, len, yc, zc, w, h, r) {
         translate([x0, yc + dy, zc + dz]) rotate([0, 90, 0]) cylinder(r = r, h = len);
 }
 
+// Rounded rectangle section w x h with corner radius r, centred.
+module rr2d(w, h, r) hull() for (sx = [-1, 1], sz = [-1, 1]) translate([sx * (w / 2 - r), sz * (h / 2 - r)]) circle(r, $fn = 32);
+// Bar along +Y from y0 to y1 with a rounded-rectangle section (X and Z), centred on x = 0, z = 0.
+module ybar(y0, y1, w, h, r) translate([0, y0, 0]) rotate([-90, 0, 0]) linear_extrude(y1 - y0) rr2d(w, h, r);
+// Round-cornered window through a wall that faces +Y.
+module ywindow(y0, len, xc, zc, w, h, r) translate([xc, 0, zc]) ybar(y0, y0 + len, w, h, r);
+
+// One printed button: head outside the wall, stem through the tunnel, flange stopping against the rib, nose touching the plunger.
+module button_pin(xc) {
+    y_head = out_y1 + btn_head_out;
+    translate([xc, 0, btn_zc]) {
+        ybar(y_stop, y_head - btn_edge, btn_w, btn_h, btn_r);
+        hull() {                                                  // the front edge of the head, rounded over
+            ybar(y_head - btn_edge - 0.01, y_head - btn_edge, btn_w, btn_h, btn_r);
+            ybar(y_head - 0.01, y_head, btn_w - 2 * btn_edge, btn_h - 2 * btn_edge, max(btn_r - btn_edge, 0.1));
+        }
+        ybar(y_stop - btn_fl_t, y_stop + 0.01, btn_fl_w, btn_h, btn_r);
+        ybar(btn_tip_y + 0.05, y_stop - btn_fl_t + 0.01, btn_nose_w, btn_nose_h, 0.4);
+    }
+}
+module buttons() for (x = btn_x) button_pin(x);
+
 module housing() {
     difference() {
         union() {
@@ -124,7 +159,7 @@ module housing() {
             }
             for (s = screws) translate([s[0], s[1], rim_z]) cylinder(d = s[2], h = top_z - rim_z + 0.01);
             // rib that carries the button windows to the board edge (the narrow wall is further out than the buttons)
-            translate([-14, pcb_y1 + 0.6, rim_z]) cube([28, in_y1 - pcb_y1 - 0.6 + 0.5, top_z - rim_z]);
+            translate([-14, y_rib, rim_z]) cube([28, in_y1 - y_rib + 0.5, top_z - rim_z]);
         }
         // window: the active area plus a gap, front frame only
         translate([0, 0, top_z - 1]) rbox(aa_x0 - win_gap, aa_x1 + win_gap, aa_y0 - win_gap, aa_y1 + win_gap, 0, plate_t + 2, 0.5);
@@ -134,8 +169,8 @@ module housing() {
         xwindow(in_x1 - 1, wall + 2, usb_y, (usb_z0 + usb_z1) / 2, usb_win_w, usb_win_h, 2.0);
         // microSD: slot for the card to enter and be pinched out
         xwindow(in_x1 - 1, wall + 2, (sd_y0 + sd_y1) / 2, sd_win_zc, sd_win_w, sd_win_h, 0.9);
-        // three side buttons: tunnels, to be fitted with printed pins (ASSUMED, see README)
-        for (x = btn_x) translate([x - 3.2, pcb_y1 + 0.2, (btn_z0 + btn_z1) / 2 - 1.7]) cube([6.4, out_y1 - pcb_y1, 3.4]);
+        // three side buttons: rounded tunnels for the printed pins
+        for (x = btn_x) ywindow(y_rib - 0.3, out_y1 - y_rib + 1.0, x, btn_zc, btn_w + 2 * btn_clear, btn_h + 2 * btn_clear, btn_r + btn_clear);
         if (logo != "")
             translate([(out_x0 + out_x1) / 2, bottom_neg ? (aa_y0 - win_gap + out_y0) / 2 : (aa_y1 + win_gap + out_y1) / 2, top_z + plate_t - 0.4])
                 linear_extrude(1) text(logo, size = logo_size, font = logo_font, spacing = 1.04, halign = "center", valign = "center");
@@ -196,7 +231,10 @@ module board_parts(g = 0) {
         for (p = concat([[frame_prof[0][0], 0]], frame_prof), sx = [-1, 1]) translate([sx * p[0], p[1]]) circle(0.01 + g, $fn = 8);
     gcube([38.74, usb_y - usb_w / 2, usb_z0], [46.27 - 38.74, usb_w, usb_z1 - usb_z0], g);
     gcube([sd_x0, sd_y0, sd_z0], [45.22 - sd_x0, sd_y1 - sd_y0, sd_z1 - sd_z0], g);
-    for (x = btn_x) gcube([x - btn_len / 2, btn_y0, btn_z0], [btn_len, btn_y1 - btn_y0, btn_z1 - btn_z0], g);
+    for (x = btn_x) {                                                                   // switch body and its plunger
+        gcube([x - 2.275, btn_y0, btn_z0], [4.55, btn_body_y1 - btn_y0, btn_z1 - btn_z0], g);
+        gcube([x - 1.0, btn_body_y1, btn_zc - 0.5], [2.0, btn_tip_y - btn_body_y1, 1.0], g);
+    }
     gcube([hdr_x0, hdr_y0, hdr_z0], [hdr_x1 - hdr_x0, hdr_y1 - hdr_y0, -hdr_z0], g);
 }
 
@@ -206,12 +244,15 @@ module board() { board_parts(); battery(); }
 module assembly() {
     color("DimGray") housing();
     color("Silver") cover();
+    color("Tomato") buttons();
     color("SeaGreen") board_parts();
     color("Orange") battery();
 }
 
 if (part == "housing") housing();
 else if (part == "cover") cover();
+else if (part == "buttons") buttons();
+else if (part == "check_pins") intersection() { buttons(); union() { housing(); cover(); } }   // must be empty: the pins do not touch the case
 else if (part == "board") board();
 else if (part == "board_parts") board_parts();
 else if (part == "battery") battery();
@@ -219,5 +260,5 @@ else if (part == "section_battery") intersection() { assembly(); translate([-100
 else if (part == "section") intersection() { assembly(); translate([-100, -100, -100]) cube([200, 100 + 12, 200]); }
 else if (part == "check_gap") intersection() { union() { housing(); cover(); } board_parts(gap_min); }   // must be empty: nothing closer than gap_min sideways
 else if (part == "plan") intersection() { assembly(); translate([-100, -100, 0.2]) cube([200, 200, 1.0]); }    // slice through the PCB, seen from the front
-else if (part == "check") intersection() { union() { housing(); cover(); } board(); }   // must be empty
+else if (part == "check") intersection() { union() { housing(); cover(); buttons(); } board(); }   // must be empty
 else assembly();

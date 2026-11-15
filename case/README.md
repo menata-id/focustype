@@ -7,7 +7,7 @@ bottom bezel with the wordmark engraved in it, and no screws on the front.
 
 ```
 ./render.sh        # PNG into renders/, STL into stl/, the clash and clearance checks, and the section drawings
-openscad -D 'part="housing"' case.scad   # one part: housing, cover, board, assembly, section, check
+openscad -D 'part="housing"' case.scad   # one part: housing, cover, buttons, board, assembly, section, check
 ```
 
 Needs `openscad` (2021.01 is enough). Headless, run it under `xvfb-run`. The section drawings (`sections.py`) need a venv at
@@ -20,6 +20,7 @@ them if it is missing. The venv is not committed.
 |---|---|
 | `housing` | front frame and walls in one piece, printed **face down** so the front has no seams or screws. Window = LCD active area + 0.3 mm. Bezel 9.0 mm on the left, right and top (`bezel_w`), 25 mm on the bottom (`bottom_w`), both measured from the edge of the active area. "FocusType_" is engraved 0.4 mm into the bottom bezel. Six bosses with M2 heat-set inserts take the cover screws; they are kept at least 0.6 mm from the board (5.6 mm wide on the narrow edges, 6.4 mm in the wide band). Windows for USB-C, microSD (card enters from the +X edge) and tunnels for the three side buttons |
 | `cover` | flat back plate with a closed pocket for the 18650 cell: the cell lies on the PCB and sticks out about 4 mm past the holder frame, so the pocket is a half tube that follows the cell and the holder outline, 19.1 mm deep inside (see Battery below). Four countersunk M2.5 screws from the back go into the board's own four standoffs, as the Waveshare acrylic plate does (`board_screws`). Six countersunk M2 screws go into the housing inserts. Window for the 2x9 header (UART0 pins stay reachable) |
+| `buttons` | three printed pins for the BOOT, PWR and KEY switches on the narrow top edge (see Buttons below) |
 | `board` | dummy of the real board built from the STEP numbers; for looking and for the check, not printed |
 
 Assembly: screw the board to the cover with four M2.5 screws into its standoffs, slide the two into the housing from the
@@ -36,6 +37,23 @@ bed starts as a steep overhang. The 9.0 mm bezel (8.7 mm visible, 7.9 mm flat) i
 Why this way (best practice for hidden fasteners): all screws enter from the back; the seam between the housing and the
 cover is on the back face; inserts sit deep in bosses far from the front surface so they cannot mark it; the board is not
 clamped by the front frame, there is a 0.3 mm gap to the glass (a thin foam strip on the glass edge is better).
+
+## Buttons
+
+The three side switches (BOOT, PWR, KEY) have a plunger 2.0 x 1.0 mm, centred on Z -0.9, whose tip is at Y 34.36 (from the STEP).
+Each button is a printed pin (`buttons`, `button_pin()`): a head that stands 0.8 mm out of the wall, a stem through a tunnel in the
+wall, a flange behind the rib that stops it falling out, and a nose that rests 0.05 mm from the plunger tip. It slides 0.3 mm
+each side in its tunnel. The housing is assembled with the pins fitted from the inside before the board goes in.
+
+**Fillet:** the stem and the head have a corner radius of 1.0 mm (`btn_r`), the hole has 1.3 mm (pin plus the 0.3 mm clearance,
+so the gap stays even all round), and the front edge of the head is rounded over by 0.45 mm (`btn_edge`). 1.0 mm is about 40% of
+the short side (2.6 mm): it still reads as a rectangle but is not sharp. Below about 0.6 mm the rounding is lost at a 0.4 mm
+nozzle, and above about 1.3 mm the button turns into a pill. The rounded top corners of the hole also help it print, because the
+tunnel is horizontal when the housing is printed face down.
+
+Print the pins with the head on the bed and the stem up; the flange then overhangs 1.0 mm on each side. Not printed or tried: the
+feel, the travel (a side switch like this moves about 0.25 mm, the pin has 0.8 mm of head standing out) and whether the flange
+prints cleanly. `render.sh` checks that the pins do not touch the housing or the board.
 
 ## Wordmark
 
@@ -64,8 +82,6 @@ Home screen). The case uses the same: `logo_font = "IBM Plex Sans:style=Bold"`, 
 - **Which long edge is the bottom** is a choice: `bottom_neg = true` puts the wide bezel on the battery side, so the three
   buttons (PWR, BOOT, KEY) end up on the narrow top edge, away from the typing hands. Set it to `false` to flip.
   Which way the firmware draws the screen is a separate setting.
-- The buttons sit about 0.2 mm inside the PCB edge and the narrow wall is further out, so the housing has tunnels to the
-  board edge. Printed button pins are still to be designed; not tested.
 - The engraving prints over air when the housing is printed face down (the letters are small bridges). Check it on the
   first print; the alternative is to print it standing up or leave `logo = ""`.
 - Insert hole `insert_d = 3.2` for M2 heat-set inserts and the cover screw length are not checked against a part;

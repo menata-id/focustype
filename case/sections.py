@@ -23,7 +23,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "renders")
 TMP = tempfile.mkdtemp(prefix="focustype_sec_")
 LIMIT = 3.0      # label gaps smaller than this (mm)
-CONTACT = 0.05   # closer than this is a deliberate contact (the standoff ends rest on the cover)
+CONTACT = 0.1    # closer than this is a deliberate contact (standoff ends on the cover, button nose just off the plunger)
 TIGHT = 0.25     # closer than this, and not a contact, is a problem
 SNUG = 0.55      # up to this is a designed small gap (glass 0.3 mm under the front frame, pocket 0.5 mm round the cell)
 
@@ -36,7 +36,7 @@ def scad(part):
 
 
 def load_all():
-    case = [trimesh.load(os.path.join(HERE, "stl", n + ".stl")) for n in ("housing", "cover")]
+    case = [trimesh.load(os.path.join(HERE, "stl", n + ".stl")) for n in ("housing", "cover", "buttons")]
     return case, scad("board_parts"), scad("battery")
 
 

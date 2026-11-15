@@ -23,7 +23,7 @@ Cut at Y = -19.4: through the cell axis and the battery pocket
 Cut at Y = 19.15: microSD slot
     0.30 mm at (-45.2, 4.3)   designed small gap
     0.30 mm at (41.3, 4.3)   designed small gap
-    2.41 mm at (45.2, -1.6)
+    2.40 mm at (45.2, -1.7)
 Cut at Y = 31.05: through the top standoffs
     0.01 mm at (-40.3, -7.0)   contact (by design)
     0.01 mm at (45.4, -7.0)   contact (by design)
@@ -32,14 +32,15 @@ Cut at Y = 31.05: through the top standoffs
 Cut at Y = 37.9: through the top screw bosses and the button tunnels
 Cut at Y = -45.7: through the bottom screw bosses (and the engraved text)
 Cut at X = 0: buttons, header, cell, from the side
+    0.05 mm at (34.4, -1.3)   contact (by design)
     0.30 mm at (-33.5, 4.3)   designed small gap
-    0.30 mm at (32.2, 4.3)   designed small gap
     0.49 mm at (-29.6, -8.0)   designed small gap
-    0.49 mm at (-9.1, -7.1)   designed small gap
+    0.49 mm at (-9.1, -7.5)   designed small gap
     0.49 mm at (-11.1, -15.2)   designed small gap
-    0.49 mm at (-27.8, -14.9)   designed small gap
+    0.49 mm at (-27.8, -15.0)   designed small gap
     1.00 mm at (2.6, -8.3)
     1.09 mm at (-21.1, -17.8)
+    2.03 mm at (30.1, 4.3)
 Cut at X = 42.75: through the standoffs
     0.01 mm at (33.6, -7.0)   contact (by design)
     0.01 mm at (-28.3, -7.0)   contact (by design)
@@ -76,11 +77,12 @@ Cut at X = 44: top and bottom screw bosses, right side
     0.30 mm at (31.2, 4.3)   designed small gap
 Plan at Z = 3.0: glass level
     1.36 mm at (-13.6, 33.8)
-    1.36 mm at (6.4, 33.8)
-    1.36 mm at (13.6, 33.8)
     1.36 mm at (-6.4, 33.8)
+    1.36 mm at (0.8, 33.8)
+    1.36 mm at (8.0, 33.8)
     1.40 mm at (44.8, 33.8)
     1.49 mm at (-20.9, 33.8)
+    1.81 mm at (15.2, 33.8)
     1.90 mm at (-45.5, 22.0)
     1.90 mm at (-45.5, -22.1)
     2.10 mm at (45.5, 14.0)
@@ -88,14 +90,13 @@ Plan at Z = 3.0: glass level
     2.10 mm at (45.5, 26.5)
     2.10 mm at (45.5, 6.8)
     2.10 mm at (45.5, -0.4)
-    2.10 mm at (45.5, -7.6)
 Plan at Z = 0.8: PCB level
-    0.60 mm at (-14.0, 34.6)
-    0.60 mm at (-6.8, 34.6)
-    0.60 mm at (3.2, 34.6)
-    0.60 mm at (13.2, 34.6)
+    0.60 mm at (-12.4, 34.6)
+    0.60 mm at (12.4, 34.6)
+    0.60 mm at (-5.2, 34.6)
+    0.60 mm at (2.0, 34.6)
+    0.64 mm at (-20.0, 34.6)
     0.64 mm at (44.8, 34.6)
-    0.85 mm at (-21.2, 34.6)
     1.14 mm at (-46.3, -22.0)
     1.14 mm at (-46.3, 22.0)
     1.34 mm at (46.3, 26.8)
@@ -105,9 +106,9 @@ Plan at Z = 0.8: PCB level
     1.34 mm at (46.3, -14.8)
     1.34 mm at (46.3, -22.0)
 Plan at Z = -1.0: components on the back
-    1.23 mm at (-7.7, 34.3)
-    1.23 mm at (2.3, 34.3)
-    1.34 mm at (12.3, 34.2)
+    0.05 mm at (-1.0, 34.4)   contact (by design)
+    0.05 mm at (-10.6, 34.4)   contact (by design)
+    0.05 mm at (10.2, 34.4)   contact (by design)
     1.72 mm at (43.5, 33.7)
     2.10 mm at (45.5, -31.1)
     2.17 mm at (46.2, -4.8)

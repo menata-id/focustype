@@ -9,14 +9,14 @@ R() { # name part camera extra...
     name=$1; part=$2; cam=$3; shift 3
     openscad -o "renders/$name.png" --imgsize=$SIZE --projection=p --camera="$cam" -D "part=\"$part\"" "$@" case.scad 2>/dev/null
 }
-R assembly_front assembly 0,0,0,55,0,25,330
-R assembly_back  assembly 0,0,-5,125,0,205,330
-R shell_back     shell    0,0,-5,125,0,205,330
-R shell_front    shell    0,0,0,55,0,25,330
-R bezel          bezel    0,0,0,55,0,25,330
+R assembly_front assembly 0,0,0,55,0,25,380
+R assembly_back  assembly 0,0,-5,125,0,205,380
+R cover_back     cover    0,0,-5,125,0,205,380
+R housing_back   housing  0,0,0,125,0,205,380
+R housing_front  housing  0,0,0,50,0,20,380
 R board          board    0,0,-5,125,0,205,330
-R section        section  0,12,-5,90,0,180,260
-for p in shell bezel lid; do openscad -o "stl/$p.stl" -D "part=\"$p\"" case.scad 2>/dev/null; done
+R section        section  0,12,-5,90,0,180,300
+for p in housing cover lid; do openscad -o "stl/$p.stl" -D "part=\"$p\"" case.scad 2>/dev/null; done
 
 # Clash check: the case must not intersect the board dummy. An empty result means no clash.
 out=$(openscad -o /tmp/focustype_check.stl -D 'part="check"' case.scad 2>&1 || true)

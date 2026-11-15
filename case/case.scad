@@ -1,9 +1,16 @@
 // FocusType case for the Waveshare ESP32-S3-RLCD-4.2 (V2). Replaces the acrylic back plate and stand.
-// Units: mm. Read case/ref/README.md first: every number below comes from the Waveshare STEP/DXF unless marked ASSUMED.
+// Units: mm. Read case/ref/README.md first: every board number below comes from the Waveshare STEP/DXF unless marked ASSUMED.
 //
+// Two printed parts plus a battery lid:
+//   housing  front frame and walls in one piece (print face down: the front has no seams or screws);
+//   cover    flat back plate; the board hangs on it by its own 4 standoffs; 6 M2 screws go from the back into
+//            heat-set inserts in the housing bosses, so nothing shows at the front;
+//   lid      closes the battery bay.
 // Frame: X = long side (USB-C at +X), Y = short side (buttons on the +Y edge), Z = thickness, front of the LCD at +Z.
-// Z = 0 is the back face of the PCB. Parts: pick with  openscad -D 'part="shell"' case.scad
-//   shell, bezel, lid, board (reference dummy, not printed), assembly, section, check
+// Z = 0 is the back face of the PCB. Pick a part with  openscad -D 'part="housing"' case.scad
+//   housing, cover, lid, board (reference dummy, not printed), assembly, section, check
+
+use <../third_party/ibm-plex/IBMPlexSans-Bold.ttf>   // the wordmark font; not installed system-wide, so load the file
 
 part = "assembly";
 $fn = 32;
@@ -24,66 +31,94 @@ sd_x0 = 30.21; sd_y0 = 11.1; sd_y1 = 27.2; sd_z0 = -1.85; sd_z1 = 0.6;  // card 
 btn_x = [-10, 0, 10]; btn_y0 = 30.71; btn_y1 = 34.36; btn_z0 = -1.8; btn_z1 = 0.4; btn_len = 4.56;  // on the +Y edge
 hdr_x0 = -10.6; hdr_x1 = 10.4; hdr_y0 = -4.0; hdr_y1 = 2.6; hdr_z0 = -8.7;  // 2x9 header
 
-// ---- case choices ----
-clear = 0.3;          // gap around the PCB
-fpc_extra = 1.0;      // extra room at +X: the LCD flex wraps round that edge (photo, ASSUMED 1 mm is enough)
-wall = 3.0;           // thick enough for the M2 self-tapping bezel screws
-floor_t = 2.0;
-floor_z = stand_end - floor_t;        // outer face of the back, -9.0
-top_z = lcd_front + clear;            // top of the walls, bezel sits on it
-bezel_t = 1.5;
-win_gap = 0.3;        // bezel window larger than the active area
-bay_clear = 0.8; bay_wall = 2.0; bay_floor = -17.0;   // battery bay under the back, open at the bottom, closed by the lid
+// ---- look (from the reference photo) ----
+bezel_w  = 9.0;       // active-area edge to the outside, left / right / top. Must stay >= about 8.8: the +X wall needs room for the flex.
+bottom_w = 25.0;      // active-area edge to the outside, wide bottom bezel
+bottom_neg = true;    // true: the wide bezel is on the -Y edge (battery side), the buttons end up on the narrow top edge. false: the other way.
+corner_r = 5.0;
+logo = "FocusType_";  // engraved 0.4 mm into the bottom bezel; "" for none. Face-down printing bridges the engraving: check the print.
+logo_font = "IBM Plex Sans:style=Bold";   // the mockup header wordmark: IBM Plex Sans, weight 700, letter-spacing 0.04 em
+logo_size = 6;
 
-cav_x0 = pcb_x0 - clear; cav_x1 = pcb_x1 + clear + fpc_extra;
-cav_y0 = pcb_y0 - clear; cav_y1 = pcb_y1 + clear;
-out_x0 = cav_x0 - wall; out_x1 = cav_x1 + wall;
-out_y0 = cav_y0 - wall; out_y1 = cav_y1 + wall;
-corner_r = 3.0;
-pilots = [for (sx = [-1, 1], sy = [-1, 1]) [sx * 25, sy * (cav_y1 + wall / 2)]];  // bezel screws, M2 self-tapping
+// ---- build choices ----
+wall = 2.2;           // housing wall
+plate_t = 1.5;        // front frame thickness
+glass_gap = 0.3;      // between the LCD glass and the underside of the front frame (a thin foam strip on the glass edge is better)
+win_gap = 0.3;        // window larger than the active area
+cover_t = 2.0;
+boss_d = 6.0; insert_d = 3.2; insert_depth = 5.0;   // M2 heat-set inserts: check the hole size against the insert datasheet
+bay_clear = 0.8; bay_wall = 2.0;
+
+rim_z = stand_end;                    // housing rim and cover inner face: the standoffs end here too
+cover_z = rim_z - cover_t;            // back face, -9.0
+top_z = lcd_front + glass_gap;        // underside of the front frame
+bay_floor = -17.0;
+
+out_x0 = aa_x0 - bezel_w; out_x1 = aa_x1 + bezel_w;
+out_y0 = aa_y0 - (bottom_neg ? bottom_w : bezel_w);
+out_y1 = aa_y1 + (bottom_neg ? bezel_w : bottom_w);
+in_x0 = out_x0 + wall; in_x1 = out_x1 - wall;
+in_y0 = out_y0 + wall; in_y1 = out_y1 - wall;
 bay_x = bat_x + bay_clear; bay_y0 = bat_y0 - bay_clear; bay_y1 = bat_y1 + bay_clear;
+
+// the 6 cover screws: 2 in the left wall, 2 on the narrow edge, 2 in the wide band
+y_narrow = bottom_neg ? out_y1 - boss_d / 2 : out_y0 + boss_d / 2;
+y_wide = bottom_neg ? (pcb_y0 + out_y0) / 2 : (pcb_y1 + out_y1) / 2;
+screws = [[out_x0 + boss_d / 2 + 0.1, 22], [out_x0 + boss_d / 2 + 0.1, -22],
+          [-20, y_narrow], [44, y_narrow], [-20, y_wide], [44, y_wide]];
 
 module rbox(x0, x1, y0, y1, z0, z1, r = 0.5) {
     translate([0, 0, z0]) linear_extrude(z1 - z0)
         hull() for (x = [x0 + r, x1 - r], y = [y0 + r, y1 - r]) translate([x, y]) circle(r);
 }
 
-module shell() {
+module housing() {
     difference() {
         union() {
-            rbox(out_x0, out_x1, out_y0, out_y1, floor_z, top_z, corner_r);
-            rbox(-bay_x - bay_wall, bay_x + bay_wall, bay_y0 - bay_wall, bay_y1 + bay_wall, bay_floor, floor_z + 0.5, 1.5);
+            difference() {
+                rbox(out_x0, out_x1, out_y0, out_y1, rim_z, top_z + plate_t, corner_r);
+                rbox(in_x0, in_x1, in_y0, in_y1, rim_z - 1, top_z, max(corner_r - wall, 0.5));
+            }
+            for (s = screws) translate([s[0], s[1], rim_z]) cylinder(d = boss_d, h = top_z - rim_z + 0.01);
+            // rib that carries the button windows to the board edge (the narrow wall is further out than the buttons)
+            translate([-14, pcb_y1 + 0.34, rim_z]) cube([28, in_y1 - pcb_y1 - 0.34 + 0.5, top_z - rim_z]);
         }
-        rbox(cav_x0, cav_x1, cav_y0, cav_y1, stand_end, top_z + 1, 0.5);                 // the PCB pocket
-        rbox(-bay_x, bay_x, bay_y0, bay_y1, bay_floor - 1, stand_end + 0.5, 1);       // the battery bay
-        for (sx = [-1, 1], sy = [-1, 1]) {                                               // screws into the standoffs
-            translate([sx * stand_xy[0], sy * stand_xy[1], floor_z - 1]) cylinder(d = 2.9, h = floor_t + 2);
-            translate([sx * stand_xy[0], sy * stand_xy[1], floor_z - 0.01]) cylinder(d1 = 5.4, d2 = 2.9, h = 1.5);
-            translate([sx * stand_xy[0], sy * stand_xy[1], bay_floor - 1]) cylinder(d = 6.5, h = -bay_floor + floor_z + 0.9 - 1);  // driver access through the bay wall
-        }
-        translate([hdr_x0 - 1, hdr_y0 - 1, floor_z - 1]) cube([hdr_x1 - hdr_x0 + 2, hdr_y1 - hdr_y0 + 2, floor_t + 2]);  // header window
+        // window: the active area plus a gap, front frame only
+        translate([0, 0, top_z - 1]) rbox(aa_x0 - win_gap, aa_x1 + win_gap, aa_y0 - win_gap, aa_y1 + win_gap, 0, plate_t + 2, 0.5);
+        for (s = screws) translate([s[0], s[1], rim_z - 1]) cylinder(d = insert_d, h = insert_depth + 1);   // inserts go in from the back
         // USB-C: a plug overmould is bigger than the socket, so 13 x 7 (ASSUMED)
-        translate([cav_x1 - 1, usb_y - 6.5, (usb_z0 + usb_z1) / 2 - 3.5]) cube([wall + 2, 13, 7]);
+        translate([in_x1 - 1, usb_y - 6.5, (usb_z0 + usb_z1) / 2 - 3.5]) cube([wall + 2, 13, 7]);
         // microSD: slot for the card to enter and be pinched out
-        translate([cav_x1 - 1, (sd_y0 + sd_y1) / 2 - 6.25, (sd_z0 + sd_z1) / 2 - 1.65]) cube([wall + 2, 12.5, 3.3]);
-        // three side buttons
-        for (x = btn_x) translate([x - 3.2, cav_y1 - 1, (btn_z0 + btn_z1) / 2 - 1.7]) cube([6.4, wall + 2, 3.4]);
-        for (p = pilots) translate([p[0], p[1], top_z - 8]) cylinder(d = 1.8, h = 9);
+        translate([in_x1 - 1, (sd_y0 + sd_y1) / 2 - 6.25, (sd_z0 + sd_z1) / 2 - 1.65]) cube([wall + 2, 12.5, 3.3]);
+        // three side buttons: tunnels, to be fitted with printed pins (ASSUMED, see README)
+        for (x = btn_x) translate([x - 3.2, pcb_y1 + 0.2, (btn_z0 + btn_z1) / 2 - 1.7]) cube([6.4, out_y1 - pcb_y1, 3.4]);
+        if (logo != "")
+            translate([(out_x0 + out_x1) / 2, bottom_neg ? (aa_y0 - win_gap + out_y0) / 2 : (aa_y1 + win_gap + out_y1) / 2, top_z + plate_t - 0.4])
+                linear_extrude(1) text(logo, size = logo_size, font = logo_font, spacing = 1.04, halign = "center", valign = "center");
     }
 }
 
-module bezel() {
+module cover() {
     difference() {
-        rbox(out_x0, out_x1, out_y0, out_y1, top_z, top_z + bezel_t, corner_r);
-        translate([0, 0, top_z - 1]) rbox(aa_x0 - win_gap, aa_x1 + win_gap, aa_y0 - win_gap, aa_y1 + win_gap, 0, bezel_t + 2, 0.5);
-        for (p = pilots) {
-            translate([p[0], p[1], top_z - 1]) cylinder(d = 2.2, h = bezel_t + 2);
-            translate([p[0], p[1], top_z + bezel_t - 1.0]) cylinder(d1 = 2.2, d2 = 4.2, h = 1.01);
+        union() {
+            rbox(out_x0, out_x1, out_y0, out_y1, cover_z, rim_z, corner_r);
+            rbox(-bay_x - bay_wall, bay_x + bay_wall, bay_y0 - bay_wall, bay_y1 + bay_wall, bay_floor, cover_z + 0.5, 1.5);   // battery bay
+        }
+        rbox(-bay_x, bay_x, bay_y0, bay_y1, bay_floor - 1, rim_z + 0.5, 1);
+        for (sx = [-1, 1], sy = [-1, 1]) {                                               // screws into the board's standoffs (M2.5)
+            translate([sx * stand_xy[0], sy * stand_xy[1], cover_z - 1]) cylinder(d = 2.9, h = cover_t + 2);
+            translate([sx * stand_xy[0], sy * stand_xy[1], cover_z - 0.01]) cylinder(d1 = 5.4, d2 = 2.9, h = 1.5);
+            translate([sx * stand_xy[0], sy * stand_xy[1], bay_floor - 1]) cylinder(d = 6.5, h = -bay_floor + cover_z + 0.9 - 1);  // driver access through the bay wall
+        }
+        translate([hdr_x0 - 1, hdr_y0 - 1, cover_z - 1]) cube([hdr_x1 - hdr_x0 + 2, hdr_y1 - hdr_y0 + 2, cover_t + 2]);  // header window
+        for (s = screws) {                                                               // M2 countersunk screws into the housing inserts
+            translate([s[0], s[1], cover_z - 1]) cylinder(d = 2.4, h = cover_t + 2);
+            translate([s[0], s[1], cover_z - 0.01]) cylinder(d1 = 4.4, d2 = 2.4, h = 1.1);
         }
     }
 }
 
-// Battery lid: friction fit plug (0.2 mm clearance), thumb notch. ASSUMED, not tested; may need a screw.
+// Battery lid: friction fit plug (0.2 mm clearance). ASSUMED, not tested; may need a screw.
 module lid() {
     translate([0, 0, bay_floor - 1.5]) {
         rbox(-bay_x - bay_wall, bay_x + bay_wall, bay_y0 - bay_wall, bay_y1 + bay_wall, 0, 1.5, 1.5);
@@ -104,16 +139,16 @@ module board() {
 }
 
 module assembly() {
-    color("DimGray") shell();
-    color("Silver") bezel();
+    color("DimGray") housing();
+    color("Silver") cover();
     color("SlateGray") lid();
     color("SeaGreen") board();
 }
 
-if (part == "shell") shell();
-else if (part == "bezel") bezel();
+if (part == "housing") housing();
+else if (part == "cover") cover();
 else if (part == "lid") lid();
 else if (part == "board") board();
 else if (part == "section") intersection() { assembly(); translate([-100, -100, -100]) cube([200, 100 + 12, 200]); }
-else if (part == "check") intersection() { union() { shell(); bezel(); lid(); } board(); }   // must be empty
+else if (part == "check") intersection() { union() { housing(); cover(); lid(); } board(); }   // must be empty
 else assembly();

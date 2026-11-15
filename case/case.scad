@@ -3,7 +3,7 @@
 //
 // Two printed parts:
 //   housing  front frame and walls in one piece (print face down: the front has no seams or screws);
-//   cover    back plate with a pocket for the battery; 6 M2 screws go from the back into heat-set inserts in the
+//   cover    back plate with a pocket for the battery; 6 M2 thread-forming screws go from the back into pilot holes in the
 //            housing bosses, so nothing shows at the front. The board is not screwed to anything: it is clamped
 //            between the front frame (through a thin foam strip on the glass edge) and the cover, which presses on
 //            the ends of the board's 4 standoffs. Take the cover off and the battery holder is open.
@@ -64,7 +64,7 @@ glass_gap = 0.3;      // between the LCD glass and the underside of the front fr
 win_gap = 0.3;        // window larger than the active area
 cover_t = 2.0;
 boss_d = 5.6; boss_d_wide = 6.4;   // boss diameters: 5.6 is all that fits between the board and the outside on the narrow edges (about 0.6 mm to the PCB)
-insert_d = 3.2; insert_depth = 5.0;   // M2 heat-set inserts: check the hole size against the insert datasheet; the wall round an insert is 1.2 mm on the narrow edges
+pilot_d = 1.8; pilot_depth = 5.0;   // M2 thread-forming screws (M2 x 6) go straight into the plastic, no inserts; the wall round a hole is 1.9 mm on the narrow edges. Print a test boss: 1.8 is a typical value, adjust to the printer and filament
 foam_t = 0.8; foam_w = 0.9;   // adhesive foam strip round the glass (closed-cell, e.g. PORON or EVA): 0.8 mm thick, 0.9 mm wide
 seat_depth = 0.3;             // the front frame is relieved by this over the glass: the gap to the glass becomes glass_gap + seat_depth = 0.6 mm, so the foam is squeezed from 0.8 to 0.6 mm (25 %)
 pin_d = 2.0; pin_h = 2.5;     // two guide pins on the cover ...
@@ -177,7 +177,7 @@ module housing() {
         // foam seat: the underside of the front frame is relieved over the whole glass outline, so the foam strip has a pocket
         translate([0, 0, top_z - 1]) rbox(-glass_x / 2 - 0.3, glass_x / 2 + 0.3, -glass_y / 2 - 0.3, glass_y / 2 + 0.3, 0, 1 + seat_depth, 0.5);
         for (p = pin_pos) translate([p[0], p[1], rim_z - 1]) cylinder(d = pin_hole_d, h = pin_hole_depth + 1);   // holes for the cover's guide pins
-        for (s = screws) translate([s[0], s[1], rim_z - 1]) cylinder(d = insert_d, h = insert_depth + 1);   // inserts go in from the back
+        for (s = screws) translate([s[0], s[1], rim_z - 1]) cylinder(d = pilot_d, h = pilot_depth + 1);   // pilot holes, open to the back
         // USB-C: the socket is only 8.94 x 3.16 and sits flush with the board edge, 3.5 mm behind the outside face, so the
         // plug overmould has to pass through the wall: the window is sized for the overmould, not the socket
         xwindow(in_x1 - 1, wall + 2, usb_y, (usb_z0 + usb_z1) / 2, usb_win_w, usb_win_h, 2.0);
@@ -225,7 +225,7 @@ module cover() {
             translate([sx * stand_xy[0], sy * stand_xy[1], cover_z - 0.01]) cylinder(d1 = 5.4, d2 = 2.9, h = 1.5);
             translate([sx * stand_xy[0], sy * stand_xy[1], cover_z - 15]) cylinder(d = 4.4, h = 15);   // driver access where the pocket's end shoulder is in the way
         }
-        for (s = screws) {                                                               // M2 countersunk screws into the housing inserts
+        for (s = screws) {                                                               // M2 countersunk screws into the housing pilot holes
             translate([s[0], s[1], cover_z - 1]) cylinder(d = 2.4, h = cover_t + 2);
             translate([s[0], s[1], cover_z - 0.01]) cylinder(d1 = 4.4, d2 = 2.4, h = 1.1);
         }

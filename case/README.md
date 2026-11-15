@@ -18,8 +18,8 @@ them if it is missing. The venv is not committed.
 
 | Part | What |
 |---|---|
-| `housing` | front frame and walls in one piece, printed **face down** so the front has no seams or screws. Window = LCD active area + 0.3 mm. Bezel 9.0 mm on the left, right and top (`bezel_w`), 25 mm on the bottom (`bottom_w`), both measured from the edge of the active area. "FocusType_" is engraved 0.4 mm into the bottom bezel. Six bosses with M2 heat-set inserts take the cover screws; they are kept at least 0.6 mm from the board (5.6 mm wide on the narrow edges, 6.4 mm in the wide band). Windows for USB-C, microSD (card enters from the +X edge) and tunnels for the three side buttons |
-| `cover` | flat back plate with a closed pocket for the 18650 cell: the cell lies on the PCB and sticks out about 4 mm past the holder frame, so the pocket is a half tube that follows the cell and the holder outline, 19.1 mm deep inside (see Battery below). Four countersunk M2.5 screws from the back go into the board's own four standoffs, as the Waveshare acrylic plate does (`board_screws`). Six countersunk M2 screws go into the housing inserts. Window for the 2x9 header (UART0 pins stay reachable) |
+| `housing` | front frame and walls in one piece, printed **face down** so the front has no seams or screws. Window = LCD active area + 0.3 mm. Bezel 9.0 mm on the left, right and top (`bezel_w`), 25 mm on the bottom (`bottom_w`), both measured from the edge of the active area. "FocusType_" is engraved 0.4 mm into the bottom bezel. Six bosses with 1.8 mm pilot holes take the cover screws (M2 x 6 thread-forming, no inserts); they are kept at least 0.6 mm from the board (5.6 mm wide on the narrow edges, 6.4 mm in the wide band). Windows for USB-C, microSD (card enters from the +X edge) and tunnels for the three side buttons |
+| `cover` | flat back plate with a closed pocket for the 18650 cell: the cell lies on the PCB and sticks out about 4 mm past the holder frame, so the pocket is a half tube that follows the cell and the holder outline, 19.1 mm deep inside (see Battery below). Four countersunk M2.5 screws from the back go into the board's own four standoffs, as the Waveshare acrylic plate does (`board_screws`). Six countersunk M2 screws go into the housing pilot holes. Window for the 2x9 header (UART0 pins stay reachable) |
 | `buttons` | three printed pins for the BOOT, PWR and KEY switches on the narrow top edge (see Buttons below) |
 | `board` | dummy of the real board built from the STEP numbers; for looking and for the check, not printed |
 
@@ -35,7 +35,7 @@ round the back face of the cover (`edge_back`). Chamfers, not fillets, because a
 bed starts as a steep overhang. The 9.0 mm bezel (8.7 mm visible, 7.9 mm flat) is the same left, right and top.
 
 Why this way (best practice for hidden fasteners): all screws enter from the back; the seam between the housing and the
-cover is on the back face; inserts sit deep in bosses far from the front surface so they cannot mark it; the board is not
+cover is on the back face; pilot holes sit deep in bosses far from the front surface so they cannot mark it; the board is not
 clamped by the front frame, there is a 0.3 mm gap to the glass (a thin foam strip on the glass edge is better).
 
 ## Buttons
@@ -132,8 +132,8 @@ Home screen). The case uses the same: `logo_font = "IBM Plex Sans:style=Bold"`, 
   Which way the firmware draws the screen is a separate setting.
 - The engraving prints over air when the housing is printed face down (the letters are small bridges). Check it on the
   first print; the alternative is to print it standing up or leave `logo = ""`.
-- Insert hole `insert_d = 3.2` for M2 heat-set inserts and the cover screw length are not checked against a part;
-  look at the datasheet of the insert you buy. Printer tolerances (`clear`, `win_gap`) are guesses: print a
+- Pilot hole `pilot_d = 1.8` for M2 thread-forming screws and the screw length (M2 x 6: 2.0 mm cover + about 4 mm in the boss) are an estimate,
+  not tested: print one test boss first. The battery is rechargeable and the cover is rarely opened, so threads cut in plastic are acceptable. Prefer PETG or ABS over PLA. Printer tolerances (`clear`, `win_gap`) are guesses: print a
   test fit first.
 - **USB-C window** (`usb_win_w`, `usb_win_h`, 13 x 7 mm). The user's OTG adapter is a plain standard USB-C male plug. The
   USB-IF compliance document ([Type-C Connectors and Cable Assemblies Compliance Document](https://www.usb.org/sites/default/files/USB_Type-C_Compliance_Document_rev_1_2.pdf)) allows
@@ -150,8 +150,8 @@ Home screen). The case uses the same: `logo_font = "IBM Plex Sans:style=Bold"`, 
 - **Bezel width:** 9.0 mm is already the smallest equal bezel with the flex gap kept. The +X side sets it: the PCB reaches 5.46 mm
   past the active area there, the flex needs about 1.3 mm and the wall is 2.2 mm (5.46 + 1.3 + 2.2). `case.scad` stops with an error
   if `bezel_w` is made smaller than that. A thinner bezel needs a thinner +X wall or a measured, smaller flex gap.
-- The 5.6 mm bosses leave 1.2 mm of plastic round a 3.2 mm insert hole; that is on the thin side for heat-set inserts. The bottom
-  ones (6.4 mm) have more. A 3.0 mm insert, or a thread-forming M2 screw into a 1.8 mm hole, would give more margin.
+- The 5.6 mm bosses leave 1.9 mm of plastic round a 1.8 mm pilot hole (the earlier 3.2 mm heat-set insert hole left only 1.2 mm).
+  Do not overtighten: threads cut in plastic strip easily.
 - **Battery:** Waveshare states no size for the 18650; the model uses the size the user gave, a cylinder 18 mm x 65 mm
   (`cell_d`, `cell_len`; see `docs/HARDWARE.md`). The pocket is a half tube sized for the worst case, not for the nominal cell:
   18.6 mm (a cell with its wrap) plus 0.5 mm all round for printing tolerance and swelling (`cell_dmax`, `pocket_clear`), so

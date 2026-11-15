@@ -43,6 +43,13 @@ if echo "$out" | grep -qi "empty"; then
 else
     echo "check: FAIL, a button pin touches the case:"; echo "$out" | tail -5; exit 1
 fi
+# The cover and its guide pins must fit the housing (the faces at the rim only touch).
+out=$(openscad -o /tmp/focustype_check4.stl -D 'part="check_fit"' case.scad 2>&1 || true)
+if echo "$out" | grep -qi "empty"; then
+    echo "check: OK, the cover and its guide pins fit the housing"
+else
+    echo "check: FAIL, the cover and the housing overlap:"; echo "$out" | tail -5; exit 1
+fi
 # Worst case: a protected cell, 18.6 mm x 70 mm, must also fit the pocket.
 out=$(openscad -o /tmp/focustype_check2.stl -D 'part="check"' -D cell_d=18.6 -D cell_len=70 case.scad 2>&1 || true)
 if echo "$out" | grep -qi "empty"; then

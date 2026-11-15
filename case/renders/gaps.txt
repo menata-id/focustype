@@ -1,80 +1,96 @@
 Smallest gaps between the board (and cell) and the case, per cut. Values in mm, position (a, b) in the cut's axes.
-Cut at Y = 0: USB-C, header, centre
-    0.30 mm at (43.6, 4.3)   designed small gap
-    0.30 mm at (-45.2, 4.3)   designed small gap
+Cut at Y = 0: USB-C, header, foam strip at both ends
+    0.51 mm at (-45.5, 4.2)   designed small gap
+    0.51 mm at (45.5, 4.2)   designed small gap
     1.00 mm at (10.4, -7.0)
     1.00 mm at (-10.6, -8.6)
     2.05 mm at (46.1, -3.2)
+    2.76 mm at (38.4, 4.3)
 Cut at Y = -19.4: through the cell axis and the battery pocket
-    0.30 mm at (-45.3, 4.3)   designed small gap
-    0.30 mm at (41.1, 4.3)   designed small gap
+    0.46 mm at (45.5, 4.3)   designed small gap
+    0.58 mm at (-45.3, 4.3)
     0.80 mm at (-38.9, -15.0)
     0.80 mm at (-38.9, -7.8)
     0.80 mm at (38.9, -7.2)
     0.80 mm at (38.9, -14.4)
+    1.10 mm at (12.5, -18.0)
+    1.10 mm at (5.3, -18.0)
+    1.10 mm at (-1.9, -18.0)
+    1.10 mm at (-9.1, -18.0)
     1.10 mm at (32.5, -18.0)
     1.10 mm at (25.3, -18.0)
-    1.10 mm at (18.1, -18.0)
-    1.10 mm at (10.9, -18.0)
-    1.10 mm at (3.7, -18.0)
-    1.10 mm at (-3.5, -18.0)
-    1.10 mm at (-10.7, -18.0)
-    1.10 mm at (-17.9, -18.0)
+    1.10 mm at (-23.5, -18.0)
+    1.10 mm at (-30.7, -18.0)
 Cut at Y = 19.15: microSD slot
-    0.30 mm at (-45.2, 4.3)   designed small gap
-    0.30 mm at (41.3, 4.3)   designed small gap
-    2.40 mm at (45.2, -1.7)
+    0.47 mm at (-45.5, 4.3)   designed small gap
+    0.54 mm at (45.4, 4.3)   designed small gap
 Cut at Y = 31.05: through the top standoffs
     0.01 mm at (-40.3, -7.0)   contact (by design)
     0.01 mm at (45.4, -7.0)   contact (by design)
-    0.30 mm at (-45.2, 4.3)   designed small gap
-    0.30 mm at (41.2, 4.3)   designed small gap
+    0.50 mm at (-45.5, 4.2)   designed small gap
+    0.53 mm at (45.5, 4.2)   designed small gap
+    2.73 mm at (38.4, 4.3)
 Cut at Y = 37.9: through the top screw bosses and the button tunnels
-Cut at Y = -45.7: through the bottom screw bosses (and the engraved text)
+Cut at Y = -45.7: bottom screw bosses (X -20, 44), guide pins (X -35, 30), engraved text
 Cut at X = 0: buttons, header, cell, from the side
     0.05 mm at (34.4, -1.3)   contact (by design)
-    0.30 mm at (-33.5, 4.3)   designed small gap
     0.49 mm at (-29.6, -8.0)   designed small gap
     0.49 mm at (-9.1, -7.5)   designed small gap
     0.49 mm at (-11.1, -15.2)   designed small gap
     0.49 mm at (-27.8, -15.0)   designed small gap
+    0.51 mm at (-33.8, 4.2)   designed small gap
     1.00 mm at (2.6, -8.3)
     1.09 mm at (-21.1, -17.8)
-    2.03 mm at (30.1, 4.3)
+    2.09 mm at (30.1, 4.3)
 Cut at X = 42.75: through the standoffs
     0.01 mm at (33.6, -7.0)   contact (by design)
     0.01 mm at (-28.3, -7.0)   contact (by design)
-    0.30 mm at (-11.7, 4.3)   designed small gap
-    0.30 mm at (33.6, 4.3)   designed small gap
-    0.30 mm at (-33.7, 4.3)   designed small gap
-    0.30 mm at (-26.5, 4.3)   designed small gap
-    0.30 mm at (-19.3, 4.3)   designed small gap
-    0.30 mm at (-4.5, 4.3)   designed small gap
-    0.30 mm at (2.8, 4.3)   designed small gap
-    0.30 mm at (10.0, 4.3)   designed small gap
-    0.30 mm at (17.2, 4.3)   designed small gap
-    0.30 mm at (24.4, 4.3)   designed small gap
+    0.50 mm at (-33.7, 4.3)   designed small gap
+    0.58 mm at (33.6, 4.3)
+    0.60 mm at (-26.5, 4.3)
+    0.60 mm at (-19.3, 4.3)
+    0.60 mm at (-12.1, 4.3)
+    0.60 mm at (-4.9, 4.3)
+    0.60 mm at (2.4, 4.3)
+    0.60 mm at (9.6, 4.3)
+    0.60 mm at (16.8, 4.3)
+    0.60 mm at (24.0, 4.3)
 Cut at X = -20: through the top and bottom screw bosses
-    0.30 mm at (-33.5, 4.3)   designed small gap
-    0.30 mm at (32.1, 4.3)   designed small gap
+    0.46 mm at (33.7, 4.3)   designed small gap
     0.49 mm at (-29.6, -8.0)   designed small gap
     0.49 mm at (-9.1, -7.1)   designed small gap
     0.49 mm at (-11.1, -15.2)   designed small gap
     0.49 mm at (-27.8, -15.0)   designed small gap
-    1.09 mm at (-21.1, -17.8)
+    0.50 mm at (-33.8, 4.3)   designed small gap
+    1.31 mm at (-19.5, -18.0)
 Cut at X = 44: top and bottom screw bosses, right side
     0.01 mm at (32.0, -7.0)   contact (by design)
     0.01 mm at (-28.7, -7.0)   contact (by design)
-    0.30 mm at (-33.7, 4.3)   designed small gap
-    0.30 mm at (-26.5, 4.3)   designed small gap
-    0.30 mm at (-19.3, 4.3)   designed small gap
-    0.30 mm at (-12.1, 4.3)   designed small gap
-    0.30 mm at (-4.9, 4.3)   designed small gap
-    0.30 mm at (2.4, 4.3)   designed small gap
-    0.30 mm at (9.6, 4.3)   designed small gap
-    0.30 mm at (16.8, 4.3)   designed small gap
-    0.30 mm at (24.0, 4.3)   designed small gap
-    0.30 mm at (31.2, 4.3)   designed small gap
+    0.50 mm at (-33.7, 4.3)   designed small gap
+    0.58 mm at (33.6, 4.3)
+    0.60 mm at (-26.5, 4.3)
+    0.60 mm at (-19.3, 4.3)
+    0.60 mm at (-12.1, 4.3)
+    0.60 mm at (-4.9, 4.3)
+    0.60 mm at (2.4, 4.3)
+    0.60 mm at (9.6, 4.3)
+    0.60 mm at (16.8, 4.3)
+    0.60 mm at (24.0, 4.3)
+Cut at X = -35: through a guide pin and its boss
+    0.49 mm at (-27.7, -15.2)   designed small gap
+    0.49 mm at (-11.0, -15.1)   designed small gap
+    0.49 mm at (-29.7, -7.0)   designed small gap
+    0.49 mm at (-9.2, -7.7)   designed small gap
+    0.50 mm at (-33.7, 4.3)   designed small gap
+    0.55 mm at (33.8, 4.2)
+Cut at X = 18: through a foam cushion under the cell
+    0.49 mm at (-11.1, -15.2)   designed small gap
+    0.49 mm at (-27.8, -15.0)   designed small gap
+    0.49 mm at (-29.6, -7.6)   designed small gap
+    0.49 mm at (-9.2, -7.8)   designed small gap
+    0.51 mm at (33.7, 4.3)   designed small gap
+    0.54 mm at (-33.8, 4.2)   designed small gap
+    1.30 mm at (-19.5, -18.0)
 Plan at Z = 3.0: glass level
     1.36 mm at (-13.6, 33.8)
     1.36 mm at (-6.4, 33.8)

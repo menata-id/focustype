@@ -64,6 +64,11 @@ win_gap = 0.3;        // window larger than the active area
 cover_t = 2.0;
 boss_d = 5.6; boss_d_wide = 6.4;   // boss diameters: 5.6 is all that fits between the board and the outside on the narrow edges (about 0.6 mm to the PCB)
 insert_d = 3.2; insert_depth = 5.0;   // M2 heat-set inserts: check the hole size against the insert datasheet; the wall round an insert is 1.2 mm on the narrow edges
+foam_t = 0.8; foam_w = 0.9;   // adhesive foam strip round the glass (closed-cell, e.g. PORON or EVA): 0.8 mm thick, 0.9 mm wide
+seat_depth = 0.3;             // the front frame is relieved by this over the glass: the gap to the glass becomes glass_gap + seat_depth = 0.6 mm, so the foam is squeezed from 0.8 to 0.6 mm (25 %)
+pin_d = 2.0; pin_h = 2.5;     // two guide pins on the cover ...
+pin_hole_d = 2.4; pin_hole_depth = 3.0; pin_boss_d = 5.0;   // ... into holes in two bosses of the housing (0.2 mm each side)
+pad_l = 10; pad_w = 8; pad_t = 1.5; pad_seat = 0.2; pad_x = [-18, 18];   // two foam cushions under the cell, 10 x 8 x 1.5 mm, in shallow seats in the pocket floor
 board_screws = true;  // 4 x M2.5 from the back of the cover into the board's own standoffs, as the Waveshare acrylic plate does
 bay_clear = 0.8; bay_wall = 2.0;   // bay_clear: end clearance along the cell; bay_wall: pocket wall
 // microSD window: the card is 11.0 x 15.0 x 1.0 mm (SD Association). The holder is a thin metal shell 1.85 mm tall (Z -1.85..0 in the STEP), so the
@@ -89,6 +94,9 @@ y_wide = bottom_neg ? (pcb_y0 + out_y0) / 2 : (pcb_y1 + out_y1) / 2;
 screws = [[out_x0 + boss_d / 2, 22, boss_d], [out_x0 + boss_d / 2, -22, boss_d],
           [-20, y_narrow, boss_d], [in_x1 - boss_d / 2, y_narrow, boss_d],
           [-20, y_wide, boss_d_wide], [in_x1 - boss_d_wide / 2, y_wide, boss_d_wide]];   // the right ones touch the +X wall
+pin_pos = [[-35, y_wide], [30, y_wide]];      // guide pins: in the wide band, 65 mm apart, away from the board and from the screws
+pocket_floor_z = -(cell_dmax + pocket_clear);  // lowest inner point of the battery pocket, -19.1
+pad_seat_z = pocket_floor_z - pad_seat;
 
 // The +X wall must leave room for the flex that wraps round that edge: about 1.3 mm from the PCB edge (ASSUMED, from the photo).
 // That, not the look, sets the smallest equal bezel: 5.46 (PCB beyond the active area) + 1.3 + wall = about 9 mm.
@@ -158,11 +166,15 @@ module housing() {
                 rbox(in_x0, in_x1, in_y0, in_y1, rim_z - 1, top_z, max(corner_r - wall, 0.5));
             }
             for (s = screws) translate([s[0], s[1], rim_z]) cylinder(d = s[2], h = top_z - rim_z + 0.01);
+            for (p = pin_pos) translate([p[0], p[1], rim_z]) cylinder(d = pin_boss_d, h = top_z - rim_z + 0.01);
             // rib that carries the button windows to the board edge (the narrow wall is further out than the buttons)
             translate([-14, y_rib, rim_z]) cube([28, in_y1 - y_rib + 0.5, top_z - rim_z]);
         }
         // window: the active area plus a gap, front frame only
         translate([0, 0, top_z - 1]) rbox(aa_x0 - win_gap, aa_x1 + win_gap, aa_y0 - win_gap, aa_y1 + win_gap, 0, plate_t + 2, 0.5);
+        // foam seat: the underside of the front frame is relieved over the whole glass outline, so the foam strip has a pocket
+        translate([0, 0, top_z - 1]) rbox(-glass_x / 2 - 0.3, glass_x / 2 + 0.3, -glass_y / 2 - 0.3, glass_y / 2 + 0.3, 0, 1 + seat_depth, 0.5);
+        for (p = pin_pos) translate([p[0], p[1], rim_z - 1]) cylinder(d = pin_hole_d, h = pin_hole_depth + 1);   // holes for the cover's guide pins
         for (s = screws) translate([s[0], s[1], rim_z - 1]) cylinder(d = insert_d, h = insert_depth + 1);   // inserts go in from the back
         // USB-C: the socket is only 8.94 x 3.16 and sits flush with the board edge, 3.5 mm behind the outside face, so the
         // plug overmould has to pass through the wall: the window is sized for the overmould, not the socket
@@ -193,6 +205,10 @@ module cover() {
     difference() {
         union() {
             cbox(out_x0, out_x1, out_y0, out_y1, cover_z, rim_z, corner_r, edge_back, 0);
+            for (p = pin_pos) translate([p[0], p[1], rim_z - 0.01]) {                  // guide pins, with a chamfered tip
+                cylinder(d = pin_d, h = pin_h - 0.5 + 0.01);
+                translate([0, 0, pin_h - 0.5]) cylinder(d1 = pin_d, d2 = pin_d - 0.8, h = 0.5);
+            }
             // battery pocket on the back: the pocket section grown by the wall, and cut off at the cover's inner face
             intersection() {
                 translate([0, cell_y, 0]) along_x(2 * (bay_x + bay_wall)) offset(r = bay_wall, $fn = 48) pocket2d();
@@ -200,6 +216,7 @@ module cover() {
             }
         }
         translate([0, cell_y, 0]) along_x(2 * bay_x) pocket2d();   // the pocket itself, open to the inside
+        for (x = pad_x) translate([x - pad_l / 2 - 0.2, cell_y - pad_w / 2 - 0.2, pad_seat_z]) cube([pad_l + 0.4, pad_w + 0.4, 3]);   // seats for the cell cushions
         translate([hdr_x0 - 1, hdr_y0 - 1, cover_z - 1]) cube([hdr_x1 - hdr_x0 + 2, hdr_y1 - hdr_y0 + 2, cover_t + 2]);  // header window
         if (board_screws) for (sx = [-1, 1], sy = [-1, 1]) {                             // M2.5 countersunk screws into the board's 4 standoffs
             translate([sx * stand_xy[0], sy * stand_xy[1], cover_z - 1]) cylinder(d = 2.9, h = cover_t + 2);
@@ -212,6 +229,18 @@ module cover() {
         }
     }
 }
+
+// Foam strip round the glass, as it sits squeezed between the glass and the relieved front frame (0.6 mm thick).
+module foam_gasket() {
+    z0 = lcd_front; z1 = top_z + seat_depth;
+    difference() {
+        rbox(-glass_x / 2 + 0.2, glass_x / 2 - 0.2, -glass_y / 2 + 0.2, glass_y / 2 - 0.2, z0, z1, 0.5);
+        translate([0, 0, z0 - 1]) rbox(-glass_x / 2 + 0.2 + foam_w, glass_x / 2 - 0.2 - foam_w, -glass_y / 2 + 0.2 + foam_w, glass_y / 2 - 0.2 - foam_w, 0, z1 - z0 + 2, 0.3);
+    }
+}
+// Two cushions under the cell, squeezed between the seat in the pocket floor and the cell (nominal 18 mm cell: 1.5 mm foam to 1.3 mm).
+module cell_pads() for (x = pad_x) translate([x - pad_l / 2, cell_y - pad_w / 2, pad_seat_z]) cube([pad_l, pad_w, -cell_d - pad_seat_z]);
+module foam() { foam_gasket(); cell_pads(); }
 
 // Box grown by g in X and Y only (used to test clearance round the board).
 module gcube(p, sz, g) translate([p[0] - g, p[1] - g, p[2]]) cube([sz[0] + 2 * g, sz[1] + 2 * g, sz[2]]);
@@ -245,6 +274,7 @@ module assembly() {
     color("DimGray") housing();
     color("Silver") cover();
     color("Tomato") buttons();
+    color("HotPink") foam();
     color("SeaGreen") board_parts();
     color("Orange") battery();
 }
@@ -252,6 +282,9 @@ module assembly() {
 if (part == "housing") housing();
 else if (part == "cover") cover();
 else if (part == "buttons") buttons();
+else if (part == "foam_gasket") foam_gasket();
+else if (part == "cell_pads") cell_pads();
+else if (part == "check_fit") intersection() { housing(); translate([0, 0, -0.01]) cover(); }   // must be empty: the cover and its guide pins fit the housing (cover 0.01 mm lower, so the rim faces that touch do not count)
 else if (part == "check_pins") intersection() { buttons(); union() { housing(); cover(); } }   // must be empty: the pins do not touch the case
 else if (part == "board") board();
 else if (part == "board_parts") board_parts();

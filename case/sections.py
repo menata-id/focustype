@@ -37,7 +37,7 @@ def scad(part):
 
 def load_all():
     case = [trimesh.load(os.path.join(HERE, "stl", n + ".stl")) for n in ("housing", "cover", "buttons")]
-    return case, scad("board_parts"), scad("battery")
+    return case, scad("board_parts"), scad("battery"), [scad("foam_gasket"), scad("cell_pads")]
 
 
 AXES = {"X": ([1, 0, 0], (1, 2)), "Y": ([0, 1, 0], (0, 2)), "Z": ([0, 0, 1], (0, 1))}
@@ -91,32 +91,40 @@ def gaps(board, case):
 
 
 def draw(ax, geom, **kw):
+    """Fill a shapely geometry with real holes (so something sitting inside a hole, like a button pin, stays visible)."""
     if geom is None:
         return
+    from matplotlib.patches import PathPatch
+    from matplotlib.path import Path
+    from shapely.geometry.polygon import orient
     for poly in getattr(geom, "geoms", [geom]):
-        if poly.geom_type != "Polygon":
+        if poly.geom_type != "Polygon" or poly.is_empty:
             continue
-        x, y = poly.exterior.xy
-        ax.fill(x, y, **kw)
-        for h in poly.interiors:
-            hx, hy = h.xy
-            ax.fill(hx, hy, color="white", zorder=kw.get("zorder", 1) + 0.1)
+        poly = orient(poly, 1.0)                       # exterior counter-clockwise, holes clockwise
+        verts, codes = [], []
+        for ring in [poly.exterior] + list(poly.interiors):
+            pts = list(ring.coords)
+            verts += pts
+            codes += [Path.MOVETO] + [Path.LINETO] * (len(pts) - 2) + [Path.CLOSEPOLY]
+        ax.add_patch(PathPatch(Path(verts, codes), **kw))
 
 
-def prepare(case, board, cell, axis, value):
+def prepare(case, board, cell, foam, axis, value):
     c = cut(case, axis, value)
+    f = cut(foam, axis, value)
     b = cut([board], axis, value)
     k = cut([cell], axis, value)
     both = unary_union([g for g in (b, k) if g is not None]) if (b is not None or k is not None) else None
     allg = unary_union([g for g in (c, b, k) if g is not None])
-    return c, b, k, gaps(both, c), allg.bounds
+    return c, b, k, f, gaps(both, c), allg.bounds
 
 
 def panel(ax, title, data, labels, report):
-    c, b, k, found, bounds = data
+    c, b, k, f, found, bounds = data
     draw(ax, c, facecolor="#c9ccd1", edgecolor="#3b3f45", linewidth=0.6, zorder=1)
     draw(ax, b, facecolor="#4c9a6a", edgecolor="#1d4d30", linewidth=0.6, zorder=2)
     draw(ax, k, facecolor="#f0a23c", edgecolor="#8a5a14", linewidth=0.6, zorder=3)
+    draw(ax, f, facecolor="#e87fb5", edgecolor="#9c2f68", linewidth=0.6, zorder=4)
     rows = []
     for d, p, q in found:
         col = "#777777" if d < CONTACT else ("#c0392b" if d < TIGHT else ("#d98200" if d < SNUG else "#1f5fbf"))
@@ -139,14 +147,14 @@ def panel(ax, title, data, labels, report):
         report.append("    %.2f mm at (%.1f, %.1f)%s" % (d, x, y, note))
 
 
-def sheet(name, cuts, ncols, case, board, cell, labels, report, mm_per_inch):
+def sheet(name, cuts, ncols, case, board, cell, foam, labels, report, mm_per_inch):
     """One figure, panels sized to their data (1 mm = the same length everywhere), so nothing is wasted."""
-    data = [prepare(case, board, cell, axis, value) for axis, value, _ in cuts]
+    data = [prepare(case, board, cell, foam, axis, value) for axis, value, _ in cuts]
     nrows = (len(cuts) + ncols - 1) // ncols
     w = [0.0] * ncols
     h = [0.0] * nrows
     for n, d in enumerate(data):
-        x0, y0, x1, y1 = d[4]
+        x0, y0, x1, y1 = d[5]
         r, c = divmod(n, ncols)
         w[c] = max(w[c], x1 - x0 + 6)
         h[r] = max(h[r], y1 - y0 + 6)
@@ -158,7 +166,7 @@ def sheet(name, cuts, ncols, case, board, cell, labels, report, mm_per_inch):
                           left=0.05, right=0.99, top=1 - 0.5 / fig_h, bottom=0.03, wspace=0.12, hspace=0.12)
     for n, ((axis, value, title), d) in enumerate(zip(cuts, data)):
         panel(fig.add_subplot(gs[divmod(n, ncols)]), title, d, labels[axis], report)
-    fig.suptitle("%s   grey = case, green = board, orange = 18650 cell. Numbers = gap in mm: grey contact, red under %.2f, "
+    fig.suptitle("%s   grey = case, green = board, orange = 18650 cell, pink = foam. Numbers = gap in mm: grey contact, red under %.2f, "
                  "orange under %.2f (designed small gap), blue otherwise" % (name, TIGHT, SNUG), fontsize=9, y=1 - 0.1 / fig_h)
     fig.savefig(os.path.join(OUT, name + ".png"), dpi=130)
     plt.close(fig)
@@ -166,29 +174,31 @@ def sheet(name, cuts, ncols, case, board, cell, labels, report, mm_per_inch):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    case, board, cell = load_all()
+    case, board, cell, foam = load_all()
     labels = {"Y": ("X (mm), USB-C at +X", "Z (mm), front up"), "X": ("Y (mm)", "Z (mm), front up"),
               "Z": ("X (mm), USB-C at +X", "Y (mm)")}
     rep = []
-    sheet("sections_front", [("Y", 0.0, "Cut at Y = 0: USB-C, header, centre"),
+    sheet("sections_front", [("Y", 0.0, "Cut at Y = 0: USB-C, header, foam strip at both ends"),
                              ("Y", -19.4, "Cut at Y = -19.4: through the cell axis and the battery pocket"),
                              ("Y", 19.15, "Cut at Y = 19.15: microSD slot"),
                              ("Y", 31.05, "Cut at Y = 31.05: through the top standoffs"),
                              ("Y", 37.9, "Cut at Y = 37.9: through the top screw bosses and the button tunnels"),
-                             ("Y", -45.7, "Cut at Y = -45.7: through the bottom screw bosses (and the engraved text)")],
-          2, case, board, cell, labels, rep, 14.0)
+                             ("Y", -45.7, "Cut at Y = -45.7: bottom screw bosses (X -20, 44), guide pins (X -35, 30), engraved text")],
+          2, case, board, cell, foam, labels, rep, 14.0)
     sheet("sections_side", [("X", 0.0, "Cut at X = 0: buttons, header, cell, from the side"),
                             ("X", 42.75, "Cut at X = 42.75: through the standoffs"),
                             ("X", -20.0, "Cut at X = -20: through the top and bottom screw bosses"),
-                            ("X", 44.0, "Cut at X = 44: top and bottom screw bosses, right side")],
-          2, case, board, cell, labels, rep, 12.0)
+                            ("X", 44.0, "Cut at X = 44: top and bottom screw bosses, right side"),
+                            ("X", -35.0, "Cut at X = -35: through a guide pin and its boss"),
+                            ("X", 18.0, "Cut at X = 18: through a foam cushion under the cell")],
+          2, case, board, cell, foam, labels, rep, 12.0)
     sheet("sections_plan", [("Z", 3.0, "Plan at Z = 3.0: glass level"),
                             ("Z", 0.8, "Plan at Z = 0.8: PCB level"),
                             ("Z", -1.0, "Plan at Z = -1.0: components on the back"),
                             ("Z", -5.0, "Plan at Z = -5.0: under the components"),
                             ("Z", -8.0, "Plan at Z = -8.0: inside the cover plate"),
                             ("Z", -12.0, "Plan at Z = -12.0: battery pocket")],
-          3, case, board, cell, labels, rep, 18.0)
+          3, case, board, cell, foam, labels, rep, 18.0)
     with open(os.path.join(OUT, "gaps.txt"), "w") as f:
         f.write("Smallest gaps between the board (and cell) and the case, per cut. Values in mm, position (a, b) in the cut's axes.\n")
         f.write("\n".join(rep) + "\n")

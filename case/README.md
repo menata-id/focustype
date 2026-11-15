@@ -55,6 +55,25 @@ Print the pins with the head on the bed and the stem up; the flange then overhan
 feel, the travel (a side switch like this moves about 0.25 mm, the pin has 0.8 mm of head standing out) and whether the flange
 prints cleanly. `render.sh` checks that the pins do not touch the housing or the board.
 
+## Foam, guide pins and cell cushions
+
+How the board sits in the case, and what protects it (all added to the model; none of it printed or tried):
+
+- **Foam seat and strip (`seat_depth`, `foam_t`, `foam_w`).** The underside of the front frame is relieved by 0.3 mm over the whole glass
+  outline, which makes a pocket for an adhesive foam strip (closed-cell, for example PORON or EVA, 0.8 mm thick, 0.9 mm wide) stuck
+  round the edge of the glass, outside the active area. The gap from the pocket roof to the glass becomes 0.6 mm, so the foam is squeezed
+  from 0.8 to 0.6 mm (25 %). The frame never rests on the glass; the foam cushions a knock and keeps dust out. The model draws the
+  strip as it sits, squeezed.
+- **Guide pins (`pin_pos`, `pin_d`, `pin_hole_d`).** Two pins of 2.0 mm on the cover, 65 mm apart in the wide bottom band, go into 2.4 mm
+  holes in two bosses of the housing (0.2 mm each side). The six cover screws have 0.2 mm of slack in their holes, so without the pins
+  the cover, and the board hanging on it, could shift sideways relative to the front window. `render.sh` checks that the cover and its
+  pins fit the housing.
+- **Cell cushions (`pad_l`, `pad_w`, `pad_t`, `pad_x`).** Two foam pads of 10 x 8 mm sit in shallow seats in the pocket floor, 18 mm either
+  side of the middle, under the cell, so it cannot hammer the holder contacts when the case is dropped. With a nominal 18 mm cell the
+  1.5 mm foam is squeezed to 1.3 mm. With a 18.6 mm cell it would be squeezed to 0.7 mm (about half): use 1.0 mm foam then. The seats
+  leave at least 1.0 mm of plastic under them.
+- Not added: corner bumpers, and locating ribs for the PCB edge (the board is fixed by the cover screws and the guide pins).
+
 ## Wordmark
 
 The mockup header uses **IBM Plex Sans, weight 700 (Bold), letter-spacing 0.04 em** for "FocusType" (see the mockup's
@@ -68,8 +87,8 @@ Home screen). The case uses the same: `logo_font = "IBM Plex Sans:style=Bold"`, 
   (this is what caught the top bosses at 0.24 mm from the PCB and the button rib at 0.34 mm, both now 0.6 mm or more), and a
   worst-case protected cell (18.6 x 70) still fits. The clash check was shown to be able to fail: with `-D clear=-1` it reports a clash.
 - **Section drawings** (`sections.py`, written to `renders/`): `sections_front.png` (cuts along the long side seen from the front,
-  like the section in the mockup), `sections_side.png` (cuts across it) and `sections_plan.png` (flat cuts at six depths). Grey is the
-  case, green the board, orange the cell, and the smallest distances between them are labelled in mm; `gaps.txt` has the same numbers.
+  like the section in the mockup), `sections_side.png` (cuts across it, including the guide pin and a cell cushion) and `sections_plan.png` (flat cuts at six depths). Grey is the
+  case, green the board, orange the cell, pink the foam, and the smallest distances between them are labelled in mm; `gaps.txt` has the same numbers.
   Smallest sideways gaps now: PCB to the button rib 0.60, to the top bosses 0.64, to the left bosses 1.14, to the +X wall 1.34 (room for
   the flex), glass to the walls 1.4, battery holder to the pocket 0.49 all round and 0.8 at its ends, the cell to the pocket floor 1.1
   (0.5 with a 18.6 mm cell). Vertical: glass to the front frame 0.30 and the standoffs resting on the cover (0.01 in the model, a

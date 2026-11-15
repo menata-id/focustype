@@ -16,12 +16,21 @@ R housing_back   housing  0,0,0,125,0,205,380
 R housing_front  housing  0,0,0,50,0,20,380
 R board          board    0,0,-5,125,0,205,330
 R section        section  0,12,-5,90,0,180,300
+R section_battery section_battery -10,-19,-8,90,0,90,300
+R board_back     board    0,0,-8,125,0,205,300
 for p in housing cover; do openscad -o "stl/$p.stl" -D "part=\"$p\"" case.scad 2>/dev/null; done
 
 # Clash check: the case must not intersect the board dummy. An empty result means no clash.
 out=$(openscad -o /tmp/focustype_check.stl -D 'part="check"' case.scad 2>&1 || true)
 if echo "$out" | grep -qi "empty"; then
-    echo "check: OK, no clash between the case and the board"
+    echo "check: OK, no clash between the case and the board (cell 18 x 65)"
 else
     echo "check: FAIL, the case touches the board:"; echo "$out" | tail -5; exit 1
+fi
+# Worst case: a protected cell, 18.6 mm x 70 mm, must also fit the pocket.
+out=$(openscad -o /tmp/focustype_check2.stl -D 'part="check"' -D cell_d=18.6 -D cell_len=70 case.scad 2>&1 || true)
+if echo "$out" | grep -qi "empty"; then
+    echo "check: OK, also with a cell of 18.6 x 70"
+else
+    echo "check: FAIL, a cell of 18.6 x 70 does not fit:"; echo "$out" | tail -5; exit 1
 fi

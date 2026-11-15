@@ -9,7 +9,7 @@
 //            the ends of the board's 4 standoffs. Take the cover off and the battery holder is open.
 // Frame: X = long side (USB-C at +X), Y = short side (buttons on the +Y edge), Z = thickness, front of the LCD at +Z.
 // Z = 0 is the back face of the PCB. Pick a part with  openscad -D 'part="housing"' case.scad
-//   housing, cover, board (reference dummy, not printed), assembly, section, check
+//   housing, cover, board (board and cell, not printed), assembly, section, section_battery, check
 
 use <../third_party/ibm-plex/IBMPlexSans-Bold.ttf>   // the wordmark font; not installed system-wide, so load the file
 
@@ -26,7 +26,17 @@ aa_x0 = -44.0; aa_x1 = 40.8;          // active area 84.8 x 63.6; the FPC / USB-
 aa_y0 = -31.8; aa_y1 = 31.8;
 stand_xy = [42.75, 31.05];            // 4 x M2.5 standoffs, 85.5 x 62.1 apart, d 5.5, PCB back to -7.0
 stand_end = -7.0;
-bat_x = 38.9; bat_y0 = -29.95; bat_y1 = -8.85; bat_depth = 15.2;  // 18650 holder, back of PCB to its top
+bat_x = 38.9; bat_y0 = -29.95; bat_y1 = -8.85; bat_depth = 15.2;  // 18650 holder: a frame on the PCB, walls 15.2 mm tall
+// The 18650 cell itself (Waveshare says only "standard 18650 rechargeable lithium"; no size, no protection board stated).
+// Size from the user: type 18650, a cylinder 18 mm in diameter and 65 mm long. (Real cells with their wrap often measure 18.3-18.6 mm
+// and protected ones are longer; bay_clear below leaves 0.8 mm.) The cell lies on the PCB, so it sticks out past the frame rim by
+// about cell_d - bat_depth. Measure the cell you actually fit.
+cell_d = 18.0; cell_len = 65.0; cell_y = (bat_y0 + bat_y1) / 2;
+// Outline of the holder frame (half width across Y, Z) read from sections of the Waveshare STEP; the pocket has to clear it.
+frame_prof = [[10.55, -4], [10.4, -6], [10.2, -8], [9.68, -10], [9.15, -12], [8.63, -14], [8.38, -15], [8.3, -15.2]];
+// The pocket is sized for the worst case, not the nominal cell: 18.6 mm is what an 18650 with its wrap can measure, plus 0.5 mm
+// all round for printing tolerance and for the cell swelling a little over its life.
+cell_dmax = 18.6; pocket_clear = 0.5;
 usb_y = 0; usb_w = 9.6; usb_z0 = -3.25; usb_z1 = 0.91;            // on the +X edge, centred
 sd_x0 = 30.21; sd_y0 = 11.1; sd_y1 = 27.2; sd_z0 = -1.85; sd_z1 = 0.6;  // card enters from +X, contacts toward the LCD
 btn_x = [-10, 0, 10]; btn_y0 = 30.71; btn_y1 = 34.36; btn_z0 = -1.8; btn_z1 = 0.4; btn_len = 4.56;  // on the +Y edge
@@ -50,20 +60,19 @@ glass_gap = 0.3;      // between the LCD glass and the underside of the front fr
 win_gap = 0.3;        // window larger than the active area
 cover_t = 2.0;
 boss_d = 6.0; insert_d = 3.2; insert_depth = 5.0;   // M2 heat-set inserts: check the hole size against the insert datasheet
-bay_clear = 0.8; bay_wall = 2.0;
+bay_clear = 0.8; bay_wall = 2.0;   // bay_clear: end clearance along the cell; bay_wall: pocket wall
 usb_win_w = 13; usb_win_h = 7;   // window for the plug overmould, ASSUMED: measure the plug you will use and add 1 mm each way
 
 rim_z = stand_end;                    // housing rim and cover inner face: the standoffs end here too
 cover_z = rim_z - cover_t;            // back face, -9.0
 top_z = lcd_front + glass_gap;        // underside of the front frame
-bay_floor = -(bat_depth + bay_clear) - bay_wall;   // outer floor of the battery pocket, -18.0
 
 out_x0 = aa_x0 - bezel_w; out_x1 = aa_x1 + bezel_w;
 out_y0 = aa_y0 - (bottom_neg ? bottom_w : bezel_w);
 out_y1 = aa_y1 + (bottom_neg ? bezel_w : bottom_w);
 in_x0 = out_x0 + wall; in_x1 = out_x1 - wall;
 in_y0 = out_y0 + wall; in_y1 = out_y1 - wall;
-bay_x = bat_x + bay_clear; bay_y0 = bat_y0 - bay_clear; bay_y1 = bat_y1 + bay_clear;
+bay_x = bat_x + bay_clear;     // half length of the pocket along X: the holder (end contacts) plus clearance
 
 // the 6 cover screws: 2 in the left wall, 2 on the narrow edge, 2 in the wide band
 y_narrow = bottom_neg ? out_y1 - boss_d / 2 : out_y0 + boss_d / 2;
@@ -121,13 +130,29 @@ module housing() {
     }
 }
 
+// Cross-section of the battery pocket (u = across the board, v = Z): a round bottom around the worst-case cell, widening up to
+// the outline of the holder frame (plus clearance) so that the frame fits in as well.
+module pocket2d() {
+    r = cell_dmax / 2 + pocket_clear;
+    hull() {
+        translate([0, -cell_dmax / 2]) circle(r, $fn = 72);
+        for (p = frame_prof, sx = [-1, 1]) translate([sx * (p[0] + pocket_clear), p[1]]) circle(0.01, $fn = 4);
+    }
+}
+// Extrude a 2D section along X, centred on the cell axis (cell_y), length len.
+module along_x(len) multmatrix([[0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1]]) translate([0, 0, -len / 2]) linear_extrude(len) children();
+
 module cover() {
     difference() {
         union() {
             cbox(out_x0, out_x1, out_y0, out_y1, cover_z, rim_z, corner_r, edge_back, 0);
-            rbox(-bay_x - bay_wall, bay_x + bay_wall, bay_y0 - bay_wall, bay_y1 + bay_wall, bay_floor, cover_z + 0.5, 1.5);   // battery pocket on the back
+            // battery pocket on the back: the pocket section grown by the wall, and cut off at the cover's inner face
+            intersection() {
+                translate([0, cell_y, 0]) along_x(2 * (bay_x + bay_wall)) offset(r = bay_wall, $fn = 48) pocket2d();
+                translate([-100, -100, -100]) cube([200, 200, 100 + rim_z]);
+            }
         }
-        rbox(-bay_x, bay_x, bay_y0, bay_y1, bay_floor + bay_wall, rim_z + 0.5, 1);   // the pocket, open to the inside
+        translate([0, cell_y, 0]) along_x(2 * bay_x) pocket2d();   // the pocket itself, open to the inside
         translate([hdr_x0 - 1, hdr_y0 - 1, cover_z - 1]) cube([hdr_x1 - hdr_x0 + 2, hdr_y1 - hdr_y0 + 2, cover_t + 2]);  // header window
         for (s = screws) {                                                               // M2 countersunk screws into the housing inserts
             translate([s[0], s[1], cover_z - 1]) cylinder(d = 2.4, h = cover_t + 2);
@@ -136,27 +161,39 @@ module cover() {
     }
 }
 
-// Reference dummy of the real board, for looking and for the clash check. Not part of the print.
-module board() {
+// The 18650 cell lying on the back of the PCB, axis along X.
+module battery() {
+    translate([-cell_len / 2, cell_y, -cell_d / 2]) rotate([0, 90, 0]) cylinder(d = cell_d, h = cell_len, $fn = 64);
+}
+
+// Reference dummy of the real board without the cell.
+module board_parts() {
     translate([pcb_x0, pcb_y0, 0]) cube([pcb_x1 - pcb_x0, pcb_y1 - pcb_y0, pcb_t]);
     translate([-glass_x / 2, -glass_y / 2, pcb_t]) cube([glass_x, glass_y, lcd_front - pcb_t]);
     for (sx = [-1, 1], sy = [-1, 1]) translate([sx * stand_xy[0], sy * stand_xy[1], stand_end + 0.01]) cylinder(d = 5.5, h = -stand_end - 0.01);
-    translate([-bat_x, bat_y0, -bat_depth]) cube([2 * bat_x, bat_y1 - bat_y0, bat_depth]);
+    // holder frame: the real outline (it narrows towards the rim), not a box
+    translate([0, cell_y, 0]) along_x(2 * bat_x) hull()
+        for (p = concat([[frame_prof[0][0], 0]], frame_prof), sx = [-1, 1]) translate([sx * p[0], p[1]]) circle(0.01, $fn = 4);
     translate([38.74, usb_y - usb_w / 2, usb_z0]) cube([46.27 - 38.74, usb_w, usb_z1 - usb_z0]);
     translate([sd_x0, sd_y0, sd_z0]) cube([45.22 - sd_x0, sd_y1 - sd_y0, sd_z1 - sd_z0]);
     for (x = btn_x) translate([x - btn_len / 2, btn_y0, btn_z0]) cube([btn_len, btn_y1 - btn_y0, btn_z1 - btn_z0]);
     translate([hdr_x0, hdr_y0, hdr_z0]) cube([hdr_x1 - hdr_x0, hdr_y1 - hdr_y0, -hdr_z0]);
 }
 
+// Board with its cell: for looking and for the clash check. Not part of the print.
+module board() { board_parts(); battery(); }
+
 module assembly() {
     color("DimGray") housing();
     color("Silver") cover();
-    color("SeaGreen") board();
+    color("SeaGreen") board_parts();
+    color("Orange") battery();
 }
 
 if (part == "housing") housing();
 else if (part == "cover") cover();
 else if (part == "board") board();
+else if (part == "section_battery") intersection() { assembly(); translate([-100, -100, -100]) cube([100, 200, 200]); }   // cut across the cell, X <= 0
 else if (part == "section") intersection() { assembly(); translate([-100, -100, -100]) cube([200, 100 + 12, 200]); }
 else if (part == "check") intersection() { union() { housing(); cover(); } board(); }   // must be empty
 else assembly();

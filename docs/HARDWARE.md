@@ -51,6 +51,18 @@ FAQ; not yet verified on the board):**
 - Not stated anywhere I could read: whether USB-C charges the battery, and whether any pin on the
   headers carries 5 V. Still needs the schematic.
 
+**18650 cell and holder (checked 2026-11-15, for the case):** Waveshare's wiki FAQ says only "a standard 18650 rechargeable
+lithium battery"; its product page sells the board with the cell (`ESP32-S3-RLCD-4.2`) or without (`-EN`, "Optional 18650 ... x1").
+No page I could read gives the cell's diameter, length, capacity or whether it has a protection board. The product page's
+battery image is named "21700-5000mAh", which is not a spec for this board. From the Waveshare STEP (V2) the holder is a
+frame on the back of the PCB, X +-38.9 x Y 21.1 mm, walls 15.2 mm tall, with the PCB as its floor (the "-" and "+" marks are on
+the PCB in the Waveshare photo). A cell lies on the PCB, so it sticks out past the frame rim: a typical 18650 is 18.0-18.6 mm
+x 65 mm with the wrap, a protected one longer and up to about 19 mm (general knowledge, not from Waveshare). **The user gives the
+cell as type 18650, a cylinder 18 mm in diameter and 65 mm long**, so its back is about 18 mm behind the PCB, 2.8 mm behind
+the frame rim. The case models 18.0 x 65 mm (`cell_d`, `cell_len` in `case/case.scad`) with 0.8 mm clearance. Measure the
+real cell if it has a protection board or a thick wrap: diameter, length, and the distance from the back face of the PCB
+to the back of the cell.
+
 **RTC (PCF85063ATL, I2C address 0x51 on GPIO13/14, INT on GPIO15; schematic net `RTC_INT`):**
 - Registers used (from the Waveshare SensorLib): CTRL1 0x00 (bit 1 = 12/24 h, bit 5 = STOP), time
   registers 0x04..0x0A in BCD, bit 7 of the seconds register = oscillator-stop flag (time invalid).

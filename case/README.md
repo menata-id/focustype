@@ -18,7 +18,7 @@ Waveshare STEP; it is not needed to build the case.
 | Part | What |
 |---|---|
 | `housing` | front frame and walls in one piece, printed **face down** so the front has no seams or screws. Window = LCD active area + 0.3 mm. Bezel 9.0 mm on the left, right and top (`bezel_w`), 25 mm on the bottom (`bottom_w`), both measured from the edge of the active area. "FocusType_" is engraved 0.4 mm into the bottom bezel. Six bosses with M2 heat-set inserts take the cover screws. Windows for USB-C, microSD (card enters from the +X edge) and tunnels for the three side buttons |
-| `cover` | flat back plate with a closed pocket for the 18650 holder (the holder sticks out 5.45 mm behind the old plate). Six countersunk M2 screws from the back go into the housing inserts. Window for the 2x9 header (UART0 pins stay reachable) |
+| `cover` | flat back plate with a closed pocket for the 18650 cell: the cell lies on the PCB and sticks out about 4 mm past the holder frame, so the pocket is a half tube that follows the cell and the holder outline, 19.1 mm deep inside (see Battery below). Six countersunk M2 screws from the back go into the housing inserts. Window for the 2x9 header (UART0 pins stay reachable) |
 | `board` | dummy of the real board built from the STEP numbers; for looking and for the check, not printed |
 
 Assembly: put the board in the housing from the back, fit the cover, fasten the six cover screws. The board is not screwed
@@ -68,7 +68,13 @@ Home screen). The case uses the same: `logo_font = "IBM Plex Sans:style=Bold"`, 
   left on that side, not measured.
 - The board is only clamped: with the cover off it can fall out of the housing if the case is held face down, and a loose
   fit may rattle. Small locating ribs in the corners are an option if that shows up in a test.
+- **Battery:** Waveshare states no size for the 18650; the model uses the size the user gave, a cylinder 18 mm x 65 mm
+  (`cell_d`, `cell_len`; see `docs/HARDWARE.md`). The pocket is a half tube sized for the worst case, not for the nominal cell:
+  18.6 mm (a cell with its wrap) plus 0.5 mm all round for printing tolerance and swelling (`cell_dmax`, `pocket_clear`), so
+  the inside is 19.6 mm across and 19.1 mm below the PCB. It also widens to the outline of the holder frame, which was read from
+  sections of the STEP. `./render.sh` checks the nominal cell (18 x 65) and a worst-case protected cell (18.6 x 70). The pocket
+  makes the case about 27 mm thick at the battery (6.15 mm in front of the PCB back plus 21.1 mm behind it) and 15.15 mm elsewhere.
+  Measure the real cell and its distance from the back of the PCB.
 - **Not modelled yet:** the RTC cell (needed to keep the time, see `docs/HANDOFF.md`), the speaker connector and vent, a
-  stand (the reference has a small leg at the back) and feet. The battery bay under the back (about 8 mm) will have to be
+  stand (the reference has a small leg at the back) and feet. The battery pocket under the back (about 12 mm) will have to be
   worked into the stand design.
-- Total thickness is about 15 mm plus the 8 mm battery bay.

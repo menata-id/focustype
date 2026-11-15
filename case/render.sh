@@ -16,7 +16,7 @@ R housing_back   housing  0,0,0,125,0,205,380
 R housing_front  housing  0,0,0,50,0,20,380
 R board          board    0,0,-5,125,0,205,330
 R section        section  0,12,-5,90,0,180,300
-for p in housing cover lid; do openscad -o "stl/$p.stl" -D "part=\"$p\"" case.scad 2>/dev/null; done
+for p in housing cover; do openscad -o "stl/$p.stl" -D "part=\"$p\"" case.scad 2>/dev/null; done
 
 # Clash check: the case must not intersect the board dummy. An empty result means no clash.
 out=$(openscad -o /tmp/focustype_check.stl -D 'part="check"' case.scad 2>&1 || true)

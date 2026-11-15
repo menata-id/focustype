@@ -41,26 +41,37 @@ clamped by the front frame, there is a 0.3 mm gap to the glass (a thin foam stri
 ## Buttons
 
 The three side switches (BOOT, PWR, KEY) have a plunger 2.0 x 1.0 mm, centred on Z -0.9, whose tip is at Y 34.36 (from the STEP).
-Each button is a printed pin (`buttons`, `button_pin()`): a head that stands 0.8 mm out of the wall, a stem through a tunnel in the
-wall, a flange behind the rib that stops it falling out, and a nose that rests 0.05 mm from the plunger tip. It slides 0.3 mm
-each side in its tunnel. The housing is assembled with the pins fitted from the inside before the board goes in.
+Each button is a printed pin (`buttons`, `button_pin()`) with **one cross-section from head to flange**: 7.0 x 5.0 mm with a 1.5 mm
+corner radius (`btn_w`, `btn_h`, `btn_r`). It stands 0.8 mm out of the wall, runs through a rounded tunnel in the wall (pin plus 0.25 mm
+each side, radius 1.75), and has a flange behind the rib (9.0 x 7.5 mm, bigger than the hole) that stops it falling out, and a nose that rests
+0.05 mm from the plunger tip. **It goes in from the inside**, head first, before the board is fitted; the flange never has to pass the hole.
+(An earlier version had a head bigger than the stem and could not be fitted from either side; `render.sh` now checks that every
+position along the path of each pin into its tunnel is clear.)
 
-**Fillet:** the stem and the head have a corner radius of 1.0 mm (`btn_r`), the hole has 1.3 mm (pin plus the 0.3 mm clearance,
-so the gap stays even all round), and the front edge of the head is rounded over by 0.45 mm (`btn_edge`). 1.0 mm is about 40% of
-the short side (2.6 mm): it still reads as a rectangle but is not sharp. Below about 0.6 mm the rounding is lost at a 0.4 mm
-nozzle, and above about 1.3 mm the button turns into a pill. The rounded top corners of the hole also help it print, because the
-tunnel is horizontal when the housing is printed face down.
+**Fillet:** 1.5 mm on the pin and 1.75 mm on the hole (so the gap stays even all round), and the front edge of the head is rounded over
+by 0.45 mm (`btn_edge`). 1.5 mm is 30% of the short side (5.0 mm): it still reads as a rectangle but is not sharp. Below about 0.6 mm the
+rounding is lost at a 0.4 mm nozzle; above about 40% the button turns into a pill. The rounded top corners of the hole also help it print,
+because the tunnel is horizontal when the housing is printed face down.
 
-**Size of the cap you press:** 7.0 x 5.0 mm (`btn_cap_w`, `btn_cap_h`), 1.5 mm corner radius, 0.45 mm round-over, standing 0.8 mm out of a
-pocket 1.2 mm deep, with 0.5 mm of travel before the cap reaches the pocket floor (the switch itself only needs about 0.25 mm). It was
-5.0 x 2.6 mm, about 2.7 times less area. The limits are the switches, which are 10 mm apart (a 7.0 mm cap leaves 2.4 mm of wall between
-the pockets, and 3.0 mm between the caps), and the board, which fixes where the stem must go; the edge is 12 mm tall, so there was room in
-height. The stem, flange and nose are unchanged. Ergonomic figures used here are general guidance, not from a standard I read: a
-fingertip pad is about 8-10 mm wide, so 7 mm wide is the most that fits between neighbours and still reads as separate buttons.
+**How big it can be:**
+- Width: the switches are 10 mm apart. With 1.2 mm of wall left between two holes (three perimeters) the pin can be at most about
+  8.3 mm wide. 7.0 mm leaves 2.0 mm between the holes and 3.0 mm between the heads.
+- Height: centred on the plunger, the hole must stay 1.5 mm above the cover seam (Z -7) and 1.35 mm below the chamfer of the front, which
+  allows a pin up to about 8.7 mm tall.
+- Smooth action: a pin guided over a tunnel only 5.6 mm long can bind if it is pushed off centre; as a rule of thumb the width should not be
+  more than about 1.2 times the guide length, so about 7 mm. Hence 7.0 x 5.0 mm is the largest comfortable size here (area 35 mm2, 2.7 times
+  the first 5.0 x 2.6 mm); 8 x 8 mm would fit but may bind and leaves heads only 2.0 mm apart. Ergonomic figures are general guidance
+  (a fingertip pad is about 8-10 mm wide), not from a standard I read.
 
-Print the pins with the head on the bed and the stem up; the flange then overhangs 1.0 mm on each side. Not printed or tried: the
-feel, the travel (a side switch like this moves about 0.25 mm, the pin has 0.8 mm of head standing out) and whether the flange
-prints cleanly. `render.sh` checks that the pins do not touch the housing or the board.
+Print the pins with the head on the bed and the stem up; the flange then overhangs 0.75 mm each side and 1.0 mm top and bottom. Not
+printed or tried: the feel, the travel (a side switch like this moves about 0.25 mm; the pin can move 0.05 mm in and out of its
+stops) and whether the flange prints cleanly. `render.sh` checks that the pins do not touch the housing or the board.
+
+## Assembly models
+
+`stl/assembly.stl` (closed), `stl/exploded.stl` (parts pulled apart along Z, the pins slid out sideways) and `stl/cutaway.stl`
+(the half with X <= 2 mm, to see the pocket, cell, foam and pins inside) are reference models for looking at on GitHub, not for printing.
+They are one colour there; `renders/exploded.png` and `renders/cutaway.png` show the parts in colour.
 
 ## Foam, guide pins and cell cushions
 

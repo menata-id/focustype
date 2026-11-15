@@ -9,7 +9,7 @@
 //            the ends of the board's 4 standoffs. Take the cover off and the battery holder is open.
 // Frame: X = long side (USB-C at +X), Y = short side (buttons on the +Y edge), Z = thickness, front of the LCD at +Z.
 // Z = 0 is the back face of the PCB. Pick a part with  openscad -D 'part="housing"' case.scad
-//   housing, cover, buttons (3 pins), board (board and cell, not printed), assembly, section, section_battery, plan, check, check_gap
+//   assembly, exploded, cutaway (reference models, not printed); housing, cover, buttons (3 pins), board (board and cell, not printed), assembly, section, section_battery, plan, check, check_gap
 
 use <../third_party/ibm-plex/IBMPlexSans-Bold.ttf>   // the wordmark font; not installed system-wide, so load the file
 
@@ -101,18 +101,15 @@ pad_seat_z = pocket_floor_z - pad_seat;
 // The +X wall must leave room for the flex that wraps round that edge: about 1.3 mm from the PCB edge (ASSUMED, from the photo).
 // That, not the look, sets the smallest equal bezel: 5.46 (PCB beyond the active area) + 1.3 + wall = about 9 mm.
 // ---- the three buttons: printed pins that carry a press from the outside to the switch plunger ----
-btn_w = 5.0; btn_h = 2.6;      // pin cross-section
-btn_r = 1.0;                   // corner radius of the pin: about 40% of the short side, so it still reads as a rectangle but is not sharp
-btn_clear = 0.3;               // sliding clearance each side; the hole is the pin + this, with the radius grown to match (1.3)
+btn_w = 7.0; btn_h = 5.0;      // pin cross-section: the same all along, head to flange, so it goes in from the inside
+btn_r = 1.5;                   // corner radius of the pin: about 40% of the short side, so it still reads as a rectangle but is not sharp
+btn_clear = 0.25;              // sliding clearance each side; the hole is the pin + this, with the radius grown to match (1.3)
 btn_edge = 0.45;               // round-over of the front edge of the head
 btn_head_out = 0.8;            // how far the head stands out of the wall
-btn_fl_w = 7.0; btn_fl_t = 0.40;   // flange behind the rib: stops the pin from falling out
+btn_fl_w = 9.0; btn_fl_h = 7.5; btn_fl_t = 0.40;   // flange behind the rib: stops the pin from falling out
 btn_nose_w = 3.0; btn_nose_h = 1.6;// nose that meets the plunger tip
 y_rib = pcb_y1 + 0.6;          // face of the rib the flange rests on
 y_stop = y_rib - 0.05;         // the flange stops 0.05 mm short of it, so the pin never touches the housing
-// The cap you press: much bigger than the stem. The switches are 10 mm apart, so a cap of 7.0 mm leaves 2.4 mm of wall between the pockets;
-// 5.0 mm tall (the edge is 12 mm tall, so there is room). It stands 0.8 mm out of a pocket that is 1.2 mm deep, with 0.5 mm of travel.
-btn_cap_w = 7.0; btn_cap_h = 5.0; btn_cap_r = 1.5; btn_cap_t = 1.5; btn_pocket_depth = 1.2;
 
 assert(in_x1 - pcb_x1 >= 1.3, "bezel_w is too small: less than 1.3 mm between the PCB edge and the +X wall");
 
@@ -148,17 +145,15 @@ module ywindow(y0, len, xc, zc, w, h, r) translate([xc, 0, zc]) ybar(y0, y0 + le
 
 // One printed button: head outside the wall, stem through the tunnel, flange stopping against the rib, nose touching the plunger.
 module button_pin(xc) {
-    y_head = out_y1 + btn_head_out;           // front of the cap
-    y_cap = y_head - btn_cap_t;               // back of the cap: 0.5 mm in front of the pocket floor, which is the travel
+    y_head = out_y1 + btn_head_out;           // front of the head
     translate([xc, 0, btn_zc]) {
-        ybar(y_stop, y_cap + 0.01, btn_w, btn_h, btn_r);                                  // stem through the tunnel
-        ybar(y_cap, y_head - btn_edge, btn_cap_w, btn_cap_h, btn_cap_r);                  // the cap
-        hull() {                                                                          // the front edge of the cap, rounded over
-            ybar(y_head - btn_edge - 0.01, y_head - btn_edge, btn_cap_w, btn_cap_h, btn_cap_r);
-            ybar(y_head - 0.01, y_head, btn_cap_w - 2 * btn_edge, btn_cap_h - 2 * btn_edge, max(btn_cap_r - btn_edge, 0.1));
+        ybar(y_stop, y_head - btn_edge, btn_w, btn_h, btn_r);                      // head and stem: one section, so it goes in from the inside
+        hull() {                                                                   // the front edge of the head, rounded over
+            ybar(y_head - btn_edge - 0.01, y_head - btn_edge, btn_w, btn_h, btn_r);
+            ybar(y_head - 0.01, y_head, btn_w - 2 * btn_edge, btn_h - 2 * btn_edge, max(btn_r - btn_edge, 0.1));
         }
-        ybar(y_stop - btn_fl_t, y_stop + 0.01, btn_fl_w, btn_h, btn_r);                   // flange against the rib
-        ybar(btn_tip_y + 0.05, y_stop - btn_fl_t + 0.01, btn_nose_w, btn_nose_h, 0.4);    // nose on the plunger
+        ybar(y_stop - btn_fl_t, y_stop + 0.01, btn_fl_w, btn_fl_h, btn_r);         // flange behind the rib: bigger than the hole, but it never has to pass through it
+        ybar(btn_tip_y + 0.05, y_stop - btn_fl_t + 0.01, btn_nose_w, btn_nose_h, 0.4);   // nose on the plunger
     }
 }
 module buttons() for (x = btn_x) button_pin(x);
@@ -173,7 +168,7 @@ module housing() {
             for (s = screws) translate([s[0], s[1], rim_z]) cylinder(d = s[2], h = top_z - rim_z + 0.01);
             for (p = pin_pos) translate([p[0], p[1], rim_z]) cylinder(d = pin_boss_d, h = top_z - rim_z + 0.01);
             // rib that carries the button windows to the board edge (the narrow wall is further out than the buttons)
-            translate([-14, y_rib, rim_z]) cube([28, in_y1 - y_rib + 0.5, top_z - rim_z]);
+            translate([-16, y_rib, rim_z]) cube([32, in_y1 - y_rib + 0.5, top_z - rim_z]);
         }
         // window: the active area plus a gap, front frame only
         translate([0, 0, top_z - 1]) rbox(aa_x0 - win_gap, aa_x1 + win_gap, aa_y0 - win_gap, aa_y1 + win_gap, 0, plate_t + 2, 0.5);
@@ -188,7 +183,6 @@ module housing() {
         xwindow(in_x1 - 1, wall + 2, (sd_y0 + sd_y1) / 2, sd_win_zc, sd_win_w, sd_win_h, 0.9);
         // three side buttons: rounded tunnels for the printed pins
         for (x = btn_x) ywindow(y_rib - 0.3, out_y1 - y_rib + 1.0, x, btn_zc, btn_w + 2 * btn_clear, btn_h + 2 * btn_clear, btn_r + btn_clear);
-        for (x = btn_x) ywindow(out_y1 - btn_pocket_depth, btn_pocket_depth + 1, x, btn_zc, btn_cap_w + 2 * btn_clear, btn_cap_h + 2 * btn_clear, btn_cap_r + btn_clear);   // pockets for the caps
         if (logo != "")
             translate([(out_x0 + out_x1) / 2, bottom_neg ? (aa_y0 - win_gap + out_y0) / 2 : (aa_y1 + win_gap + out_y1) / 2, top_z + plate_t - 0.4])
                 linear_extrude(1) text(logo, size = logo_size, font = logo_font, spacing = 1.04, halign = "center", valign = "center");
@@ -285,13 +279,27 @@ module assembly() {
     color("Orange") battery();
 }
 
+// Parts pulled apart along Z (front up) so each can be seen; the button pins slide out sideways.
+module exploded() {
+    color("DimGray") translate([0, 0, 40]) housing();
+    color("HotPink") translate([0, 0, 22]) foam_gasket();
+    color("Tomato") translate([0, 22, 40]) buttons();
+    color("SeaGreen") board_parts();
+    color("Orange") translate([0, 0, -14]) battery();
+    color("HotPink") translate([0, 0, -26]) cell_pads();
+    color("Silver") translate([0, 0, -38]) cover();
+}
+
 if (part == "housing") housing();
 else if (part == "cover") cover();
 else if (part == "buttons") buttons();
 else if (part == "foam_gasket") foam_gasket();
 else if (part == "cell_pads") cell_pads();
 else if (part == "check_fit") intersection() { housing(); translate([0, 0, -0.01]) cover(); }   // must be empty: the cover and its guide pins fit the housing (cover 0.01 mm lower, so the rim faces that touch do not count)
+else if (part == "check_pin_path") intersection() { union() { housing(); cover(); } union() for (d = [0, 0.5, 1, 2, 3, 4, 5, 6, 8, 10]) translate([0, -d, 0]) buttons(); }   // must be empty: a pin can be pushed in from the inside, along its own axis
 else if (part == "check_pins") intersection() { buttons(); union() { housing(); cover(); } }   // must be empty: the pins do not touch the case
+else if (part == "exploded") exploded();
+else if (part == "cutaway") intersection() { assembly(); translate([-100, -100, -100]) cube([102, 200, 200]); }   // the half with X <= 2, to see inside
 else if (part == "board") board();
 else if (part == "board_parts") board_parts();
 else if (part == "battery") battery();

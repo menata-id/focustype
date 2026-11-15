@@ -19,7 +19,10 @@ R section        section  0,12,-5,90,0,180,300
 R section_battery section_battery -10,-19,-8,90,0,90,300
 R board_back     board    0,0,-8,125,0,205,300
 R plan           plan     0,-8,0,0,0,0,250
+R exploded       exploded 0,0,10,70,0,25,520
+R cutaway        cutaway  -10,-10,-2,65,0,60,330
 R buttons_close  assembly 0,36,-1,75,0,200,90
+for p in assembly exploded cutaway; do openscad -o "stl/$p.stl" -D "part=\"$p\"" case.scad 2>/dev/null; done
 for p in housing cover buttons; do openscad -o "stl/$p.stl" -D "part=\"$p\"" case.scad 2>/dev/null; done
 
 # Clash check: the case must not intersect the board dummy. An empty result means no clash.
@@ -42,6 +45,13 @@ if echo "$out" | grep -qi "empty"; then
     echo "check: OK, the button pins do not touch the case"
 else
     echo "check: FAIL, a button pin touches the case:"; echo "$out" | tail -5; exit 1
+fi
+# A pin must be able to go in from the inside: every position along its path to the tunnel is clear of the case.
+out=$(openscad -o /tmp/focustype_check5.stl -D 'part="check_pin_path"' case.scad 2>&1 || true)
+if echo "$out" | grep -qi "empty"; then
+    echo "check: OK, the button pins can be pushed in from the inside"
+else
+    echo "check: FAIL, a button pin is blocked on its way in:"; echo "$out" | tail -5; exit 1
 fi
 # The cover and its guide pins must fit the housing (the faces at the rim only touch).
 out=$(openscad -o /tmp/focustype_check4.stl -D 'part="check_fit"' case.scad 2>&1 || true)

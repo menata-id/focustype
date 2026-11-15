@@ -6,25 +6,28 @@ are in `ref/README.md`. The look follows the reference photo the user gave: equa
 bottom bezel with the wordmark engraved in it, and no screws on the front.
 
 ```
-./render.sh        # PNG into renders/, STL into stl/, then the clash check
+./render.sh        # PNG into renders/, STL into stl/, the clash and clearance checks, and the section drawings
 openscad -D 'part="housing"' case.scad   # one part: housing, cover, board, assembly, section, check
 ```
 
-Needs `openscad` (2021.01 is enough). Headless, run it under `xvfb-run`. `.venv/` (cadquery) is only for reading the
-Waveshare STEP; it is not needed to build the case.
+Needs `openscad` (2021.01 is enough). Headless, run it under `xvfb-run`. The section drawings (`sections.py`) need a venv at
+`case/.venv` with `trimesh networkx shapely matplotlib` (`cadquery` was only used to read the Waveshare STEP); `render.sh` skips
+them if it is missing. The venv is not committed.
 
 ## Parts and how they go together
 
 | Part | What |
 |---|---|
-| `housing` | front frame and walls in one piece, printed **face down** so the front has no seams or screws. Window = LCD active area + 0.3 mm. Bezel 9.0 mm on the left, right and top (`bezel_w`), 25 mm on the bottom (`bottom_w`), both measured from the edge of the active area. "FocusType_" is engraved 0.4 mm into the bottom bezel. Six bosses with M2 heat-set inserts take the cover screws. Windows for USB-C, microSD (card enters from the +X edge) and tunnels for the three side buttons |
-| `cover` | flat back plate with a closed pocket for the 18650 cell: the cell lies on the PCB and sticks out about 4 mm past the holder frame, so the pocket is a half tube that follows the cell and the holder outline, 19.1 mm deep inside (see Battery below). Six countersunk M2 screws from the back go into the housing inserts. Window for the 2x9 header (UART0 pins stay reachable) |
+| `housing` | front frame and walls in one piece, printed **face down** so the front has no seams or screws. Window = LCD active area + 0.3 mm. Bezel 9.0 mm on the left, right and top (`bezel_w`), 25 mm on the bottom (`bottom_w`), both measured from the edge of the active area. "FocusType_" is engraved 0.4 mm into the bottom bezel. Six bosses with M2 heat-set inserts take the cover screws; they are kept at least 0.6 mm from the board (5.6 mm wide on the narrow edges, 6.4 mm in the wide band). Windows for USB-C, microSD (card enters from the +X edge) and tunnels for the three side buttons |
+| `cover` | flat back plate with a closed pocket for the 18650 cell: the cell lies on the PCB and sticks out about 4 mm past the holder frame, so the pocket is a half tube that follows the cell and the holder outline, 19.1 mm deep inside (see Battery below). Four countersunk M2.5 screws from the back go into the board's own four standoffs, as the Waveshare acrylic plate does (`board_screws`). Six countersunk M2 screws go into the housing inserts. Window for the 2x9 header (UART0 pins stay reachable) |
 | `board` | dummy of the real board built from the STEP numbers; for looking and for the check, not printed |
 
-Assembly: put the board in the housing from the back, fit the cover, fasten the six cover screws. The board is not screwed
-to anything: it is clamped between the front frame (a thin foam strip on the glass edge, about 0.5 mm, compressed into the
-0.3 mm gap) and the cover, which presses on the ends of the board's four standoffs. To change the battery take the six
-screws out and lift the cover: the holder is then open, no second lid. The front is sealed.
+Assembly: screw the board to the cover with four M2.5 screws into its standoffs, slide the two into the housing from the
+back, fasten the six M2 cover screws. The glass sits 0.3 mm behind the front frame (a thin foam strip on the glass edge, about
+0.5 mm, compressed into that gap, is better than leaving it bare). To change the battery take out the six M2 screws, pull the
+cover with the board out of the housing, and take the four M2.5 screws out to free the board: the holder is then open. The front
+is sealed. If that is too fiddly, set `board_screws = false`: the board is then only clamped between the front frame and the
+cover (which presses on the ends of the standoffs) and the battery is reached by lifting the cover alone, but the board is not fixed.
 
 Edges: plan-view corner radius 3 mm (`corner_r`), 0.8 mm 45 degree chamfer round the front face (`edge_front`) and 1.0 mm
 round the back face of the cover (`edge_back`). Chamfers, not fillets, because a fillet on the face that lies on the print
@@ -42,11 +45,18 @@ Home screen). The case uses the same: `logo_font = "IBM Plex Sans:style=Bold"`, 
 
 ## What has actually been checked
 
-- **Done (on the host only, nothing printed or fitted):** the model renders; `./render.sh` reports no intersection between
-  the case and the board dummy. The check was shown to be able to fail: with `-D clear=-1` it reports a clash. The
-  section render shows the board between the frame and the cover.
-- The dummy is boxes made from bounding boxes in the STEP, so it is only as good as those. The holder footprint is the
-  largest section; the real one tapers.
+- **Done (on the host only, nothing printed or fitted):** the model renders. `./render.sh` runs three checks and stops on a failure:
+  no intersection between the case and the board dummy (cell 18 x 65), no part of the case closer than 0.45 mm sideways to the board
+  (this is what caught the top bosses at 0.24 mm from the PCB and the button rib at 0.34 mm, both now 0.6 mm or more), and a
+  worst-case protected cell (18.6 x 70) still fits. The clash check was shown to be able to fail: with `-D clear=-1` it reports a clash.
+- **Section drawings** (`sections.py`, written to `renders/`): `sections_front.png` (cuts along the long side seen from the front,
+  like the section in the mockup), `sections_side.png` (cuts across it) and `sections_plan.png` (flat cuts at six depths). Grey is the
+  case, green the board, orange the cell, and the smallest distances between them are labelled in mm; `gaps.txt` has the same numbers.
+  Smallest sideways gaps now: PCB to the button rib 0.60, to the top bosses 0.64, to the left bosses 1.14, to the +X wall 1.34 (room for
+  the flex), glass to the walls 1.4, battery holder to the pocket 0.49 all round and 0.8 at its ends, the cell to the pocket floor 1.1
+  (0.5 with a 18.6 mm cell). Vertical: glass to the front frame 0.30 and the standoffs resting on the cover (0.01 in the model, a
+  deliberate contact).
+- The dummy is boxes and a hull made from bounding boxes and sections of the STEP, so it is only as good as those.
 - **Not checked:** anything on a real board or a real print.
 
 ## Open items and assumptions
@@ -66,8 +76,11 @@ Home screen). The case uses the same: `logo_font = "IBM Plex Sans:style=Bold"`, 
   its overmould can pass through the wall, so the window is sized for the overmould. USB-IF gives no overmould limit I could
   find; plugs vary. Measure the plug or OTG adapter you will use and set the window to that plus 1 mm each way. The LCD flex wraps round the +X edge (photo): 1.4 mm is
   left on that side, not measured.
-- The board is only clamped: with the cover off it can fall out of the housing if the case is held face down, and a loose
-  fit may rattle. Small locating ribs in the corners are an option if that shows up in a test.
+- **Bezel width:** 9.0 mm is already the smallest equal bezel with the flex gap kept. The +X side sets it: the PCB reaches 5.46 mm
+  past the active area there, the flex needs about 1.3 mm and the wall is 2.2 mm (5.46 + 1.3 + 2.2). `case.scad` stops with an error
+  if `bezel_w` is made smaller than that. A thinner bezel needs a thinner +X wall or a measured, smaller flex gap.
+- The 5.6 mm bosses leave 1.2 mm of plastic round a 3.2 mm insert hole; that is on the thin side for heat-set inserts. The bottom
+  ones (6.4 mm) have more. A 3.0 mm insert, or a thread-forming M2 screw into a 1.8 mm hole, would give more margin.
 - **Battery:** Waveshare states no size for the 18650; the model uses the size the user gave, a cylinder 18 mm x 65 mm
   (`cell_d`, `cell_len`; see `docs/HARDWARE.md`). The pocket is a half tube sized for the worst case, not for the nominal cell:
   18.6 mm (a cell with its wrap) plus 0.5 mm all round for printing tolerance and swelling (`cell_dmax`, `pocket_clear`), so

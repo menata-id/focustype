@@ -40,13 +40,24 @@ clamped by the front frame, there is a 0.3 mm gap to the glass (a thin foam stri
 
 ## Buttons
 
-The three side switches (BOOT, PWR, KEY) have a plunger 2.0 x 1.0 mm, centred on Z -0.9, whose tip is at Y 34.36 (from the STEP).
+The three side switches (BOOT, PWR, KEY) sit in a notch of the board: the +Y edge of the PCB is cut back 1.0 mm between X -15 and 15
+(`pcb_notch_x`, `pcb_notch_d`; from the Waveshare STEP, and visible in the photos), and each switch has a plunger 2.0 x 1.0 mm, centred
+on Z -0.9, whose tip is at Y 34.36.
 Each button is a printed pin (`buttons`, `button_pin()`) with **one cross-section from head to flange**: 7.0 x 5.0 mm with a 1.5 mm
 corner radius (`btn_w`, `btn_h`, `btn_r`). It stands 0.8 mm out of the wall, runs through a rounded tunnel in the wall (pin plus 0.25 mm
-each side, radius 1.75), and has a flange behind the rib (9.0 x 7.5 mm, bigger than the hole) that stops it falling out, and a nose that rests
-0.05 mm from the plunger tip. **It goes in from the inside**, head first, before the board is fitted; the flange never has to pass the hole.
-(An earlier version had a head bigger than the stem and could not be fitted from either side; `render.sh` now checks that every
-position along the path of each pin into its tunnel is clear.)
+each side, radius 1.75), and has a flange behind the rib (9.0 x 7.5 mm, bigger than the hole) that stops it falling out, and a nose that
+reaches to 0.05 mm from the plunger tip. **It goes in from the inside**, head first, before the board is fitted; the flange never has to
+pass the hole. (An earlier version had a head bigger than the stem and could not be fitted from either side; `render.sh` now checks that
+every position along the path of each pin into its tunnel is clear.)
+
+**Thin rib, long nose, trim to fit.** The rib behind the wall (the reinforcement the flange rests on) was 3.9 mm thick; it is now 2.2 mm
+(`y_rib` = 36.4), so the tunnel is 4.4 mm long and the nose between the flange and the switch is about 1.6 mm. The printed pins
+(`stl/buttons_print.stl`) have 1.0 mm of extra nose (`btn_stock`): fit the pin, see where the nose meets the plunger, and trim the nose
+(blade or sandpaper) until it just clears it. That absorbs about +-0.5 mm of error in the board position and in the printed housing,
+instead of the 0.3 mm the first design allowed. The cost is a shorter guide: the pin width is now 1.6 times the guide length, above the
+rule of thumb of 1.2 (see below), so the button may bind a little when pressed at its edge. If it does, go to a narrower pin
+(`btn_w` about 5.3 mm) or thicken the rib again (lower `y_rib`); the trim range then shrinks. `stl/buttons.stl` is the nominal pin used for
+the checks and sections; `renders/button_detail.png` is a close-up section of the middle button.
 
 **Fillet:** 1.5 mm on the pin and 1.75 mm on the hole (so the gap stays even all round), and the front edge of the head is rounded over
 by 0.45 mm (`btn_edge`). 1.5 mm is 30% of the short side (5.0 mm): it still reads as a rectangle but is not sharp. Below about 0.6 mm the

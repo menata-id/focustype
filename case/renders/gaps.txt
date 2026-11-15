@@ -34,15 +34,15 @@ Cut at Y = 37.9: through the top screw bosses and the button tunnels
 Cut at Y = 40.5: the button heads in their holes
 Cut at Y = -45.7: bottom screw bosses (X -20, 44), guide pins (X -35, 30), engraved text
 Cut at X = 0: buttons, header, cell, from the side
-    0.05 mm at (34.4, -1.3)   contact (by design)
+    0.05 mm at (34.4, -1.2)   contact (by design)
     0.49 mm at (-29.6, -8.0)   designed small gap
-    0.49 mm at (-9.1, -7.5)   designed small gap
+    0.49 mm at (-9.1, -7.1)   designed small gap
     0.49 mm at (-11.1, -15.2)   designed small gap
     0.49 mm at (-27.8, -15.0)   designed small gap
-    0.51 mm at (-33.8, 4.2)   designed small gap
+    0.50 mm at (-33.8, 4.2)   designed small gap
     1.00 mm at (2.6, -8.3)
     1.09 mm at (-21.1, -17.8)
-    2.09 mm at (30.1, 4.3)
+    2.05 mm at (30.1, 4.3)
 Cut at X = 42.75: through the standoffs
     0.01 mm at (33.6, -7.0)   contact (by design)
     0.01 mm at (-28.3, -7.0)   contact (by design)
@@ -78,43 +78,38 @@ Cut at X = 44: top and bottom screw bosses, right side
     0.60 mm at (16.8, 4.3)
     0.60 mm at (24.0, 4.3)
 Cut at X = -35: through a guide pin and its boss
+    0.45 mm at (-33.8, 4.3)   designed small gap
     0.49 mm at (-27.7, -15.2)   designed small gap
-    0.49 mm at (-11.0, -15.1)   designed small gap
-    0.49 mm at (-29.7, -7.0)   designed small gap
-    0.49 mm at (-9.2, -7.7)   designed small gap
-    0.50 mm at (-33.7, 4.3)   designed small gap
-    0.55 mm at (33.8, 4.2)
+    0.49 mm at (-11.0, -15.0)   designed small gap
+    0.49 mm at (-29.7, -7.1)   designed small gap
+    0.49 mm at (-9.1, -7.2)   designed small gap
+    0.51 mm at (33.8, 4.2)   designed small gap
 Cut at X = 18: through a foam cushion under the cell
     0.49 mm at (-11.1, -15.2)   designed small gap
     0.49 mm at (-27.8, -15.0)   designed small gap
     0.49 mm at (-29.6, -7.6)   designed small gap
-    0.49 mm at (-9.2, -7.8)   designed small gap
+    0.49 mm at (-9.1, -7.4)   designed small gap
     0.51 mm at (33.7, 4.3)   designed small gap
     0.54 mm at (-33.8, 4.2)   designed small gap
     1.30 mm at (-19.5, -18.0)
 Plan at Z = 3.0: glass level
-    1.36 mm at (-11.2, 33.8)
-    1.36 mm at (8.0, 33.8)
-    1.36 mm at (-4.0, 33.8)
-    1.36 mm at (15.2, 33.8)
-    1.40 mm at (44.8, 33.8)
-    1.40 mm at (-20.1, 33.8)
-    1.90 mm at (-45.5, 22.0)
+    1.41 mm at (44.6, 33.8)
+    1.41 mm at (-20.2, 33.8)
+    1.90 mm at (-45.5, 21.9)
     1.90 mm at (-45.5, -22.1)
-    2.10 mm at (45.5, 14.0)
-    2.10 mm at (45.5, -30.8)
-    2.10 mm at (45.5, 26.5)
-    2.10 mm at (45.5, 6.8)
-    2.10 mm at (45.5, -0.4)
-    2.10 mm at (45.5, -7.6)
+    2.10 mm at (45.5, 13.9)
+    2.10 mm at (45.5, -30.9)
+    2.10 mm at (45.5, 26.7)
+    2.10 mm at (45.5, 6.7)
+    2.10 mm at (45.5, -0.5)
+    2.10 mm at (45.5, -7.7)
+    2.10 mm at (45.5, -14.9)
+    2.10 mm at (45.5, -22.1)
+    2.60 mm at (14.6, 33.8)
+    2.60 mm at (-13.0, 33.8)
 Plan at Z = 0.8: PCB level
-    0.15 mm at (2.0, 34.6)   <-- TIGHT
-    0.15 mm at (9.2, 34.6)   <-- TIGHT
-    0.15 mm at (-14.4, 34.6)   <-- TIGHT
-    0.15 mm at (-7.2, 34.6)   <-- TIGHT
+    0.64 mm at (-20.0, 34.6)
     0.64 mm at (44.8, 34.6)
-    0.73 mm at (16.4, 34.6)
-    1.00 mm at (-21.6, 34.6)
     1.14 mm at (-46.3, -22.0)
     1.14 mm at (-46.3, 22.0)
     1.34 mm at (46.3, 26.8)
@@ -122,6 +117,11 @@ Plan at Z = 0.8: PCB level
     1.34 mm at (46.3, 8.0)
     1.34 mm at (46.3, -7.6)
     1.34 mm at (46.3, -14.8)
+    1.34 mm at (46.3, -22.0)
+    1.34 mm at (46.3, -29.2)
+    1.56 mm at (15.2, 34.6)
+    2.39 mm at (-11.8, 33.6)
+    2.39 mm at (-1.8, 33.6)
 Plan at Z = -1.0: components on the back
     0.05 mm at (-1.0, 34.4)   contact (by design)
     0.05 mm at (-10.6, 34.4)   contact (by design)

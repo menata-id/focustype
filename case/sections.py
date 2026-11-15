@@ -200,6 +200,16 @@ def main():
                             ("Z", -8.0, "Plan at Z = -8.0: inside the cover plate"),
                             ("Z", -12.0, "Plan at Z = -12.0: battery pocket")],
           3, case, board, cell, foam, labels, rep, 18.0)
+    # close-up of the middle button
+    d = prepare(case, board, cell, foam, "X", 0.0)
+    fig, ax = plt.subplots(figsize=(9, 5.2))
+    panel(ax, "Cut at X = 0 through the middle button: thinned rib, flange, long nose (trim stock), PCB notch", d,
+          ("Y (mm)", "Z (mm), front up"), [])
+    ax.set_xlim(30, 43)
+    ax.set_ylim(-7.5, 7.5)
+    fig.tight_layout()
+    fig.savefig(os.path.join(OUT, "button_detail.png"), dpi=130)
+    plt.close(fig)
     with open(os.path.join(OUT, "gaps.txt"), "w") as f:
         f.write("Smallest gaps between the board (and cell) and the case, per cut. Values in mm, position (a, b) in the cut's axes.\n")
         f.write("\n".join(rep) + "\n")

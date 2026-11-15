@@ -23,7 +23,7 @@ R exploded       exploded 0,0,10,70,0,25,520
 R cutaway        cutaway  -10,-10,-2,65,0,60,330
 R buttons_close  assembly 0,36,-1,75,0,200,90
 for p in assembly exploded cutaway; do openscad -o "stl/$p.stl" -D "part=\"$p\"" case.scad 2>/dev/null; done
-for p in housing cover buttons; do openscad -o "stl/$p.stl" -D "part=\"$p\"" case.scad 2>/dev/null; done
+for p in housing cover buttons buttons_print; do openscad -o "stl/$p.stl" -D "part=\"$p\"" case.scad 2>/dev/null; done
 
 # Clash check: the case must not intersect the board dummy. An empty result means no clash.
 out=$(openscad -o /tmp/focustype_check.stl -D 'part="check"' case.scad 2>&1 || true)

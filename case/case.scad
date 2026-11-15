@@ -21,6 +21,7 @@ $fn = 32;
 pcb_x0 = -46.26; pcb_x1 = 46.26;      // 92.52 long
 pcb_y0 = -34.56; pcb_y1 = 34.56;      // 69.12 wide
 pcb_t  = 1.6;
+pcb_notch_x = 15; pcb_notch_d = 1.0;   // the +Y edge is cut back 1.0 mm between X -15 and 15, where the three switches sit (Waveshare STEP; visible in the photos)
 glass_x = 91.0;  glass_y = 67.6;      // centred on the PCB
 lcd_front = 4.35;                     // LCD front face above the PCB back (V1 would be 3.75)
 aa_x0 = -44.0; aa_x1 = 40.8;          // active area 84.8 x 63.6; the FPC / USB-C end has the wide margin
@@ -108,7 +109,8 @@ btn_edge = 0.45;               // round-over of the front edge of the head
 btn_head_out = 0.8;            // how far the head stands out of the wall
 btn_fl_w = 9.0; btn_fl_h = 7.5; btn_fl_t = 0.40;   // flange behind the rib: stops the pin from falling out
 btn_nose_w = 3.0; btn_nose_h = 1.6;// nose that meets the plunger tip
-y_rib = pcb_y1 + 0.6;          // face of the rib the flange rests on
+y_rib = 36.4;                  // face of the (thinned) rib the flange rests on: the rib is 2.2 mm thick, was 3.9, so the nose is 1.5 mm long and can be trimmed to fit
+btn_stock = 1.0;               // extra nose length on the printed pins, to be trimmed off when fitting (see buttons_print)
 y_stop = y_rib - 0.05;         // the flange stops 0.05 mm short of it, so the pin never touches the housing
 
 assert(in_x1 - pcb_x1 >= 1.3, "bezel_w is too small: less than 1.3 mm between the PCB edge and the +X wall");
@@ -144,7 +146,7 @@ module ybar(y0, y1, w, h, r) translate([0, y0, 0]) rotate([-90, 0, 0]) linear_ex
 module ywindow(y0, len, xc, zc, w, h, r) translate([xc, 0, zc]) ybar(y0, y0 + len, w, h, r);
 
 // One printed button: head outside the wall, stem through the tunnel, flange stopping against the rib, nose touching the plunger.
-module button_pin(xc) {
+module button_pin(xc, stock = 0) {
     y_head = out_y1 + btn_head_out;           // front of the head
     translate([xc, 0, btn_zc]) {
         ybar(y_stop, y_head - btn_edge, btn_w, btn_h, btn_r);                      // head and stem: one section, so it goes in from the inside
@@ -153,10 +155,10 @@ module button_pin(xc) {
             ybar(y_head - 0.01, y_head, btn_w - 2 * btn_edge, btn_h - 2 * btn_edge, max(btn_r - btn_edge, 0.1));
         }
         ybar(y_stop - btn_fl_t, y_stop + 0.01, btn_fl_w, btn_fl_h, btn_r);         // flange behind the rib: bigger than the hole, but it never has to pass through it
-        ybar(btn_tip_y + 0.05, y_stop - btn_fl_t + 0.01, btn_nose_w, btn_nose_h, 0.4);   // nose on the plunger
+        ybar(btn_tip_y + 0.05 - stock, y_stop - btn_fl_t + 0.01, btn_nose_w, btn_nose_h, 0.4);   // nose on the plunger
     }
 }
-module buttons() for (x = btn_x) button_pin(x);
+module buttons(stock = 0) for (x = btn_x) button_pin(x, stock);
 
 module housing() {
     difference() {
@@ -252,7 +254,9 @@ module battery(g = 0) {
 
 // Reference dummy of the real board without the cell. g grows every part sideways by g (clearance check).
 module board_parts(g = 0) {
-    gcube([pcb_x0, pcb_y0, 0], [pcb_x1 - pcb_x0, pcb_y1 - pcb_y0, pcb_t], g);
+    gcube([pcb_x0, pcb_y0, 0], [-pcb_notch_x - pcb_x0, pcb_y1 - pcb_y0, pcb_t], g);          // PCB, left of the notch
+    gcube([-pcb_notch_x, pcb_y0, 0], [2 * pcb_notch_x, pcb_y1 - pcb_notch_d - pcb_y0, pcb_t], g);                       // between: cut back
+    gcube([pcb_notch_x, pcb_y0, 0], [pcb_x1 - pcb_notch_x, pcb_y1 - pcb_y0, pcb_t], g);                               // right of the notch
     gcube([-glass_x / 2, -glass_y / 2, pcb_t], [glass_x, glass_y, lcd_front - pcb_t], g);
     for (sx = [-1, 1], sy = [-1, 1]) translate([sx * stand_xy[0], sy * stand_xy[1], stand_end + 0.01]) cylinder(d = 5.5 + 2 * g, h = -stand_end - 0.01);
     // holder frame: the real outline (it narrows towards the rim), not a box
@@ -293,6 +297,7 @@ module exploded() {
 if (part == "housing") housing();
 else if (part == "cover") cover();
 else if (part == "buttons") buttons();
+else if (part == "buttons_print") buttons(btn_stock);   // the pins as printed: nose 1.0 mm long, trimmed to fit
 else if (part == "foam_gasket") foam_gasket();
 else if (part == "cell_pads") cell_pads();
 else if (part == "check_fit") intersection() { housing(); translate([0, 0, -0.01]) cover(); }   // must be empty: the cover and its guide pins fit the housing (cover 0.01 mm lower, so the rim faces that touch do not count)

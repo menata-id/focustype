@@ -35,7 +35,9 @@ hdr_x0 = -10.6; hdr_x1 = 10.4; hdr_y0 = -4.0; hdr_y1 = 2.6; hdr_z0 = -8.7;  // 2
 bezel_w  = 9.0;       // active-area edge to the outside, left / right / top. Must stay >= about 8.8: the +X wall needs room for the flex.
 bottom_w = 25.0;      // active-area edge to the outside, wide bottom bezel
 bottom_neg = true;    // true: the wide bezel is on the -Y edge (battery side), the buttons end up on the narrow top edge. false: the other way.
-corner_r = 5.0;
+corner_r = 3.0;       // plan-view corner radius: just takes the edge off, still reads as a rectangle
+edge_front = 0.8;     // 45 degree chamfer round the front face (a chamfer prints cleaner than a fillet when printed face down)
+edge_back = 1.0;      // same, round the back face of the cover
 logo = "FocusType_";  // engraved 0.4 mm into the bottom bezel; "" for none. Face-down printing bridges the engraving: check the print.
 logo_font = "IBM Plex Sans:style=Bold";   // the mockup header wordmark: IBM Plex Sans, weight 700, letter-spacing 0.04 em
 logo_size = 6;
@@ -72,11 +74,23 @@ module rbox(x0, x1, y0, y1, z0, z1, r = 0.5) {
         hull() for (x = [x0 + r, x1 - r], y = [y0 + r, y1 - r]) translate([x, y]) circle(r);
 }
 
+// Rounded rectangle in plan, chamfered at the bottom (cb) and top (ct) edges; the corner radius shrinks with the chamfer.
+module cbox(x0, x1, y0, y1, z0, z1, r, cb = 0, ct = 0) {
+    module slab(z, h, i) translate([0, 0, z]) linear_extrude(h)
+        hull() for (x = [x0 + r, x1 - r], y = [y0 + r, y1 - r]) translate([x, y]) circle(max(r - i, 0.01));
+    hull() {
+        slab(z0, 0.01, cb);
+        slab(z0 + cb, 0.01, 0);
+        slab(z1 - ct - 0.01, 0.01, 0);
+        slab(z1 - 0.01, 0.01, ct);
+    }
+}
+
 module housing() {
     difference() {
         union() {
             difference() {
-                rbox(out_x0, out_x1, out_y0, out_y1, rim_z, top_z + plate_t, corner_r);
+                cbox(out_x0, out_x1, out_y0, out_y1, rim_z, top_z + plate_t, corner_r, 0, edge_front);
                 rbox(in_x0, in_x1, in_y0, in_y1, rim_z - 1, top_z, max(corner_r - wall, 0.5));
             }
             for (s = screws) translate([s[0], s[1], rim_z]) cylinder(d = boss_d, h = top_z - rim_z + 0.01);
@@ -101,7 +115,7 @@ module housing() {
 module cover() {
     difference() {
         union() {
-            rbox(out_x0, out_x1, out_y0, out_y1, cover_z, rim_z, corner_r);
+            cbox(out_x0, out_x1, out_y0, out_y1, cover_z, rim_z, corner_r, edge_back, 0);
             rbox(-bay_x - bay_wall, bay_x + bay_wall, bay_y0 - bay_wall, bay_y1 + bay_wall, bay_floor, cover_z + 0.5, 1.5);   // battery bay
         }
         rbox(-bay_x, bay_x, bay_y0, bay_y1, bay_floor - 1, rim_z + 0.5, 1);

@@ -25,6 +25,10 @@ Waveshare STEP; it is not needed to build the case.
 Assembly: screw the board to the cover, slide the housing over it from the front, fasten the six cover screws, fit the
 battery and the lid. The front is sealed; everything is opened from the back.
 
+Edges: plan-view corner radius 3 mm (`corner_r`), 0.8 mm 45 degree chamfer round the front face (`edge_front`) and 1.0 mm
+round the back face of the cover (`edge_back`). Chamfers, not fillets, because a fillet on the face that lies on the print
+bed starts as a steep overhang. The 9.0 mm bezel (8.7 mm visible, 7.9 mm flat) is the same left, right and top.
+
 Why this way (best practice for hidden fasteners): all screws enter from the back; the seam between the housing and the
 cover is on the back face; inserts sit deep in bosses far from the front surface so they cannot mark it; the board is not
 clamped by the front frame, there is a 0.3 mm gap to the glass (a thin foam strip on the glass edge is better).

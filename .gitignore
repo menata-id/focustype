@@ -11,3 +11,5 @@ tests/host/test_format
 sdkconfig.bak*
 tests/host/test_pcf
 tests/host/test_meta
+case/.venv/
+__pycache__/

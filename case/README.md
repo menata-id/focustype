@@ -71,11 +71,18 @@ Home screen). The case uses the same: `logo_font = "IBM Plex Sans:style=Bold"`, 
 - Insert hole `insert_d = 3.2` for M2 heat-set inserts and the cover screw length are not checked against a part;
   look at the datasheet of the insert you buy. Printer tolerances (`clear`, `win_gap`) are guesses: print a
   test fit first.
-- **USB-C window** (`usb_win_w`, `usb_win_h`, now 13 x 7, assumed). The socket itself is only 8.94 x 3.16 mm (shell 9.58 x
-  4.16) and sits flush with the board edge, so its face is 3.5 mm behind the outside of the wall; a plug only seats fully if
-  its overmould can pass through the wall, so the window is sized for the overmould. USB-IF gives no overmould limit I could
-  find; plugs vary. Measure the plug or OTG adapter you will use and set the window to that plus 1 mm each way. The LCD flex wraps round the +X edge (photo): 1.4 mm is
-  left on that side, not measured.
+- **USB-C window** (`usb_win_w`, `usb_win_h`, 13 x 7 mm). The user's OTG adapter is a plain standard USB-C male plug. The
+  USB-IF compliance document ([Type-C Connectors and Cable Assemblies Compliance Document](https://www.usb.org/sites/default/files/USB_Type-C_Compliance_Document_rev_1_2.pdf)) allows
+  a plug overmould of up to 12.35 x 6.5 mm (a maximum, not a fixed size; vendors differ), so 13 x 7 clears any compliant plug with 0.3 mm
+  each side in width and 0.25 mm in height. The window cannot be much smaller than that: the socket itself is only 8.94 x 3.16 mm and
+  sits flush with the board edge, 3.5 mm behind the outside of the wall, so the plug's overmould has to pass through the wall to seat
+  the plug fully. If the actual plug is measured smaller, the window can shrink to that plus about 0.6 mm. Not tried with a real plug. The
+  LCD flex wraps round the +X edge (photo): 1.3 mm is left on that side, not measured.
+- **microSD window** (`sd_win_w`, `sd_win_h`, `sd_win_zc`): 11.6 x 2.2 mm, was 12.5 x 3.3. A microSD card is 11.0 x 15.0 x 1.0 mm. The
+  holder on the board is a thin metal shell 1.85 mm tall (Z -1.85..0 in the Waveshare STEP), so the card lies at Z -0.93, centred on
+  Y 19.15; the window is the card plus 0.3 mm each side in width, and the holder's own height plus 0.35 mm. The old window was also
+  about 0.3 mm off the card's height. The card sits 4.6 mm behind the outside of the wall, so a push-push card pops out into the
+  window and is taken out with a fingernail or tweezers; not tried with a real card.
 - **Bezel width:** 9.0 mm is already the smallest equal bezel with the flex gap kept. The +X side sets it: the PCB reaches 5.46 mm
   past the active area there, the flex needs about 1.3 mm and the wall is 2.2 mm (5.46 + 1.3 + 2.2). `case.scad` stops with an error
   if `bezel_w` is made smaller than that. A thinner bezel needs a thinner +X wall or a measured, smaller flex gap.

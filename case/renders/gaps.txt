@@ -23,7 +23,7 @@ Cut at Y = -19.4: through the cell axis and the battery pocket
 Cut at Y = 19.15: microSD slot
     0.30 mm at (-45.2, 4.3)   designed small gap
     0.30 mm at (41.3, 4.3)   designed small gap
-    2.46 mm at (45.2, -1.6)
+    2.41 mm at (45.2, -1.6)
 Cut at Y = 31.05: through the top standoffs
     0.01 mm at (-40.3, -7.0)   contact (by design)
     0.01 mm at (45.4, -7.0)   contact (by design)
@@ -98,12 +98,12 @@ Plan at Z = 0.8: PCB level
     0.85 mm at (-21.2, 34.6)
     1.14 mm at (-46.3, -22.0)
     1.14 mm at (-46.3, 22.0)
-    1.34 mm at (46.3, 12.4)
-    1.34 mm at (46.3, 27.6)
+    1.34 mm at (46.3, 26.8)
+    1.34 mm at (46.3, 17.2)
+    1.34 mm at (46.3, 8.0)
     1.34 mm at (46.3, -7.6)
     1.34 mm at (46.3, -14.8)
     1.34 mm at (46.3, -22.0)
-    1.34 mm at (46.3, -29.2)
 Plan at Z = -1.0: components on the back
     1.23 mm at (-7.7, 34.3)
     1.23 mm at (2.3, 34.3)
@@ -112,7 +112,7 @@ Plan at Z = -1.0: components on the back
     2.10 mm at (45.5, -31.1)
     2.17 mm at (46.2, -4.8)
     2.19 mm at (46.2, 4.8)
-    2.38 mm at (45.2, 25.8)
+    2.38 mm at (45.2, 26.6)
     2.38 mm at (45.2, 12.5)
 Plan at Z = -5.0: under the components
     1.72 mm at (43.4, 33.7)

@@ -64,7 +64,11 @@ boss_d = 5.6; boss_d_wide = 6.4;   // boss diameters: 5.6 is all that fits betwe
 insert_d = 3.2; insert_depth = 5.0;   // M2 heat-set inserts: check the hole size against the insert datasheet; the wall round an insert is 1.2 mm on the narrow edges
 board_screws = true;  // 4 x M2.5 from the back of the cover into the board's own standoffs, as the Waveshare acrylic plate does
 bay_clear = 0.8; bay_wall = 2.0;   // bay_clear: end clearance along the cell; bay_wall: pocket wall
-usb_win_w = 13; usb_win_h = 7;   // window for the plug overmould, ASSUMED: measure the plug you will use and add 1 mm each way
+// microSD window: the card is 11.0 x 15.0 x 1.0 mm (SD Association). The holder is a thin metal shell 1.85 mm tall (Z -1.85..0 in the STEP), so the
+// card lies at Z -0.93, centred on Y 19.15. Window = card + 0.3 mm each side in width, and the holder's own height + 0.35 mm.
+sd_win_w = 11.6; sd_win_h = 2.2; sd_win_zc = -0.93;
+usb_win_w = 13; usb_win_h = 7;   // USB-C plug overmould: the USB-IF compliance document allows up to 12.35 x 6.5 mm, so a standard plug fits with
+                                 // 0.3 mm each side in width and 0.25 mm in height. A smaller plug could use a smaller window.
 
 rim_z = stand_end;                    // housing rim and cover inner face: the standoffs end here too
 cover_z = rim_z - cover_t;            // back face, -9.0
@@ -129,7 +133,7 @@ module housing() {
         // plug overmould has to pass through the wall: the window is sized for the overmould, not the socket
         xwindow(in_x1 - 1, wall + 2, usb_y, (usb_z0 + usb_z1) / 2, usb_win_w, usb_win_h, 2.0);
         // microSD: slot for the card to enter and be pinched out
-        xwindow(in_x1 - 1, wall + 2, (sd_y0 + sd_y1) / 2, (sd_z0 + sd_z1) / 2, 12.5, 3.3, 1.0);
+        xwindow(in_x1 - 1, wall + 2, (sd_y0 + sd_y1) / 2, sd_win_zc, sd_win_w, sd_win_h, 0.9);
         // three side buttons: tunnels, to be fitted with printed pins (ASSUMED, see README)
         for (x = btn_x) translate([x - 3.2, pcb_y1 + 0.2, (btn_z0 + btn_z1) / 2 - 1.7]) cube([6.4, out_y1 - pcb_y1, 3.4]);
         if (logo != "")

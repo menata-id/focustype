@@ -110,6 +110,9 @@ btn_fl_w = 7.0; btn_fl_t = 0.40;   // flange behind the rib: stops the pin from 
 btn_nose_w = 3.0; btn_nose_h = 1.6;// nose that meets the plunger tip
 y_rib = pcb_y1 + 0.6;          // face of the rib the flange rests on
 y_stop = y_rib - 0.05;         // the flange stops 0.05 mm short of it, so the pin never touches the housing
+// The cap you press: much bigger than the stem. The switches are 10 mm apart, so a cap of 7.0 mm leaves 2.4 mm of wall between the pockets;
+// 5.0 mm tall (the edge is 12 mm tall, so there is room). It stands 0.8 mm out of a pocket that is 1.2 mm deep, with 0.5 mm of travel.
+btn_cap_w = 7.0; btn_cap_h = 5.0; btn_cap_r = 1.5; btn_cap_t = 1.5; btn_pocket_depth = 1.2;
 
 assert(in_x1 - pcb_x1 >= 1.3, "bezel_w is too small: less than 1.3 mm between the PCB edge and the +X wall");
 
@@ -145,15 +148,17 @@ module ywindow(y0, len, xc, zc, w, h, r) translate([xc, 0, zc]) ybar(y0, y0 + le
 
 // One printed button: head outside the wall, stem through the tunnel, flange stopping against the rib, nose touching the plunger.
 module button_pin(xc) {
-    y_head = out_y1 + btn_head_out;
+    y_head = out_y1 + btn_head_out;           // front of the cap
+    y_cap = y_head - btn_cap_t;               // back of the cap: 0.5 mm in front of the pocket floor, which is the travel
     translate([xc, 0, btn_zc]) {
-        ybar(y_stop, y_head - btn_edge, btn_w, btn_h, btn_r);
-        hull() {                                                  // the front edge of the head, rounded over
-            ybar(y_head - btn_edge - 0.01, y_head - btn_edge, btn_w, btn_h, btn_r);
-            ybar(y_head - 0.01, y_head, btn_w - 2 * btn_edge, btn_h - 2 * btn_edge, max(btn_r - btn_edge, 0.1));
+        ybar(y_stop, y_cap + 0.01, btn_w, btn_h, btn_r);                                  // stem through the tunnel
+        ybar(y_cap, y_head - btn_edge, btn_cap_w, btn_cap_h, btn_cap_r);                  // the cap
+        hull() {                                                                          // the front edge of the cap, rounded over
+            ybar(y_head - btn_edge - 0.01, y_head - btn_edge, btn_cap_w, btn_cap_h, btn_cap_r);
+            ybar(y_head - 0.01, y_head, btn_cap_w - 2 * btn_edge, btn_cap_h - 2 * btn_edge, max(btn_cap_r - btn_edge, 0.1));
         }
-        ybar(y_stop - btn_fl_t, y_stop + 0.01, btn_fl_w, btn_h, btn_r);
-        ybar(btn_tip_y + 0.05, y_stop - btn_fl_t + 0.01, btn_nose_w, btn_nose_h, 0.4);
+        ybar(y_stop - btn_fl_t, y_stop + 0.01, btn_fl_w, btn_h, btn_r);                   // flange against the rib
+        ybar(btn_tip_y + 0.05, y_stop - btn_fl_t + 0.01, btn_nose_w, btn_nose_h, 0.4);    // nose on the plunger
     }
 }
 module buttons() for (x = btn_x) button_pin(x);
@@ -183,6 +188,7 @@ module housing() {
         xwindow(in_x1 - 1, wall + 2, (sd_y0 + sd_y1) / 2, sd_win_zc, sd_win_w, sd_win_h, 0.9);
         // three side buttons: rounded tunnels for the printed pins
         for (x = btn_x) ywindow(y_rib - 0.3, out_y1 - y_rib + 1.0, x, btn_zc, btn_w + 2 * btn_clear, btn_h + 2 * btn_clear, btn_r + btn_clear);
+        for (x = btn_x) ywindow(out_y1 - btn_pocket_depth, btn_pocket_depth + 1, x, btn_zc, btn_cap_w + 2 * btn_clear, btn_cap_h + 2 * btn_clear, btn_cap_r + btn_clear);   // pockets for the caps
         if (logo != "")
             translate([(out_x0 + out_x1) / 2, bottom_neg ? (aa_y0 - win_gap + out_y0) / 2 : (aa_y1 + win_gap + out_y1) / 2, top_z + plate_t - 0.4])
                 linear_extrude(1) text(logo, size = logo_size, font = logo_font, spacing = 1.04, halign = "center", valign = "center");

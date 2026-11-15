@@ -51,6 +51,13 @@ the short side (2.6 mm): it still reads as a rectangle but is not sharp. Below a
 nozzle, and above about 1.3 mm the button turns into a pill. The rounded top corners of the hole also help it print, because the
 tunnel is horizontal when the housing is printed face down.
 
+**Size of the cap you press:** 7.0 x 5.0 mm (`btn_cap_w`, `btn_cap_h`), 1.5 mm corner radius, 0.45 mm round-over, standing 0.8 mm out of a
+pocket 1.2 mm deep, with 0.5 mm of travel before the cap reaches the pocket floor (the switch itself only needs about 0.25 mm). It was
+5.0 x 2.6 mm, about 2.7 times less area. The limits are the switches, which are 10 mm apart (a 7.0 mm cap leaves 2.4 mm of wall between
+the pockets, and 3.0 mm between the caps), and the board, which fixes where the stem must go; the edge is 12 mm tall, so there was room in
+height. The stem, flange and nose are unchanged. Ergonomic figures used here are general guidance, not from a standard I read: a
+fingertip pad is about 8-10 mm wide, so 7 mm wide is the most that fits between neighbours and still reads as separate buttons.
+
 Print the pins with the head on the bed and the stem up; the flange then overhangs 1.0 mm on each side. Not printed or tried: the
 feel, the travel (a side switch like this moves about 0.25 mm, the pin has 0.8 mm of head standing out) and whether the flange
 prints cleanly. `render.sh` checks that the pins do not touch the housing or the board.

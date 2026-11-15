@@ -183,6 +183,7 @@ def main():
                              ("Y", 19.15, "Cut at Y = 19.15: microSD slot"),
                              ("Y", 31.05, "Cut at Y = 31.05: through the top standoffs"),
                              ("Y", 37.9, "Cut at Y = 37.9: through the top screw bosses and the button tunnels"),
+                             ("Y", 40.5, "Cut at Y = 40.5: the button caps in their pockets"),
                              ("Y", -45.7, "Cut at Y = -45.7: bottom screw bosses (X -20, 44), guide pins (X -35, 30), engraved text")],
           2, case, board, cell, foam, labels, rep, 14.0)
     sheet("sections_side", [("X", 0.0, "Cut at X = 0: buttons, header, cell, from the side"),

@@ -33,7 +33,7 @@ paths like `stl/` and `renders/` are inside the type's folder.
 
 | Part | What |
 |---|---|
-| `housing` | front frame and walls in one piece, printed **face down** so the front has no seams or screws. Window = LCD active area + 0.3 mm. Bezel 9.0 mm on the left, right and top (`bezel_w`), 25 mm on the bottom (`bottom_w`), both measured from the edge of the active area. "FocusType_" is engraved 0.4 mm into the bottom bezel. Six bosses with 1.8 mm pilot holes take the cover screws (M2 x 6 thread-forming, no inserts); they are kept at least 0.6 mm from the board (5.6 mm wide on the narrow edges, 6.4 mm in the wide band). Windows for USB-C, microSD (card enters from the +X edge) and tunnels for the three side buttons |
+| `housing` | front frame and walls in one piece, printed **face down** so the front has no seams or screws. Window = LCD active area + 0.3 mm. Bezel 9.0 mm on the left, right and top (`bezel_w`), 25 mm on the bottom (`bottom_w`), both measured from the edge of the active area (this is type `classic`; `equal` has 9 mm on all four sides). On `classic` only, "FocusType_" is engraved 0.4 mm into the bottom bezel; `equal` has no engraving. Six bosses with 1.8 mm pilot holes take the cover screws (M2 x 6 thread-forming, no inserts); they are kept at least 0.6 mm from the board (5.6 mm wide on the narrow edges, 6.4 mm in the wide band). Windows for USB-C, microSD (card enters from the +X edge) and tunnels for the three side buttons |
 | `cover` | flat back plate with a closed pocket for the 18650 cell: the cell lies on the PCB and sticks out about 4 mm past the holder frame, so the pocket is a half tube that follows the cell and the holder outline, 19.1 mm deep inside (see Battery below). Four countersunk M2.5 screws from the back go into the board's own four standoffs, as the Waveshare acrylic plate does (`board_screws`). Six countersunk M2 screws go into the housing pilot holes. Window for the 2x9 header (UART0 pins stay reachable) |
 | `buttons` | three printed pins for the BOOT, PWR and KEY switches on the narrow top edge (see Buttons below) |
 | `board` | dummy of the real board built from the STEP numbers; for looking and for the check, not printed |
@@ -180,7 +180,7 @@ Home screen). The case uses the same: `logo_font = "IBM Plex Sans:style=Bold"`, 
 - **Which long edge is the bottom** is a choice: `bottom_neg = true` puts the wide bezel on the battery side, so the three
   buttons (PWR, BOOT, KEY) end up on the narrow top edge, away from the typing hands. Set it to `false` to flip.
   Which way the firmware draws the screen is a separate setting.
-- The engraving prints over air when the housing is printed face down (the letters are small bridges). Check it on the
+- `classic` only (`equal` has no engraving): the engraving prints over air when the housing is printed face down (the letters are small bridges). Check it on the
   first print; the alternative is to print it standing up or leave `logo = ""`.
 - Pilot hole `pilot_d = 1.8` for M2 thread-forming screws and the screw length (M2 x 6: 2.0 mm cover + about 4 mm in the boss) are an estimate,
   not tested: print one test boss first. The battery is rechargeable and the cover is rarely opened, so threads cut in plastic are acceptable. Prefer PETG or ABS over PLA. Printer tolerances (`clear`, `win_gap`) are guesses: print a

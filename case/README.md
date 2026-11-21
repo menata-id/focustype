@@ -127,8 +127,11 @@ Its files are in `equal/stl`, `equal/step` and `equal/renders` (`compare_front.p
 **It is possible**, because the PCB is centred in Y: it reaches 2.76 mm past the active area at the bottom as well as at the top, and the top
 already works with 9.0 mm. Outline 102.8 x 81.6 mm (type 1 is 102.8 x 97.6). What changes against type 1:
 - Bottom bezel 9.0 mm (`bezel_w`), like left, right and top. The buttons stay on the +Y edge.
-- The two bottom cover screws and the two guide pins move to the edge, like the top ones: 5.6 mm bosses (not 6.4 mm) 0.6 mm from the PCB.
+- The two bottom cover screws move to the edge, like the top ones: 5.6 mm bosses (not 6.4 mm) 0.6 mm from the PCB.
   There is no room left in the middle of a wide band, so they sit where the top screws sit.
+- **No guide pins** (`guide_pins = false` in `equal/equal.scad`), for a simple first print: the cover has no pins, and the housing has no pin bosses or
+  pin holes. The six screws locate the cover (they have 0.2 mm of slack, so line the cover up by eye or against the board before tightening). Set it
+  to true to bring the pins back. `classic` is unchanged (it keeps its pins).
 - **No wordmark** (`logo = ""` in `equal/equal.scad`). A 4 mm "FocusType_" fits the 7.9 mm flat bezel but its strokes are only about 0.6-0.8 mm
   (measured on the glyph shapes, not on a print), 1.5 to 2 nozzle widths, and the counters are smaller still, so it was dropped. To bring it back
   remove that line (the text is then size 4, `logo_size` in `case.scad`) and print a test bezel first. The housing is 19.7 mm3 heavier without it.

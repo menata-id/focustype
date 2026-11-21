@@ -4,3 +4,4 @@
 include <../case.scad>
 equal_bezel = true;   // the last assignment wins in OpenSCAD, so this overrides the default in case.scad
 logo = "";            // no wordmark on this type: the 7.9 mm flat bezel leaves a 4 mm text only 0.6-0.8 mm strokes, too fine to rely on printing
+guide_pins = false;   // simple first print: no guide pins on the cover, no pin bosses or holes in the housing (the six screws locate the cover)

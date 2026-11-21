@@ -100,7 +100,8 @@ boss_b = equal_bezel ? boss_d : boss_d_wide;   // boss diameter in the bottom ba
 screws = [[out_x0 + boss_d / 2, 22, boss_d], [out_x0 + boss_d / 2, -22, boss_d],
           [-20, y_narrow, boss_d], [in_x1 - boss_d / 2, y_narrow, boss_d],
           [-20, y_wide, boss_b], [in_x1 - boss_b / 2, y_wide, boss_b]];   // the right ones touch the +X wall
-pin_pos = [[-35, y_wide], [30, y_wide]];      // guide pins: in the wide band, 65 mm apart, away from the board and from the screws
+guide_pins = true;   // false: no guide pins, no pin bosses and no holes (type equal sets this)
+pin_pos = guide_pins ? [[-35, y_wide], [30, y_wide]] : [];      // guide pins: in the wide band, 65 mm apart, away from the board and from the screws
 pocket_floor_z = -(cell_dmax + pocket_clear);  // lowest inner point of the battery pocket, -19.1
 pad_seat_z = pocket_floor_z - pad_seat;
 

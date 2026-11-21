@@ -14,6 +14,7 @@ panel. See [Status](#status).
 - `docs/ARCHITECTURE.md`: components, display pipeline, editor, storage, keyboard, app flow.
 - `docs/HARDWARE.md`: pin map, ST7305 facts with datasheet pages, USB host notes, font license.
 - `docs/DESIGN.md`: mockup-to-code mapping, what each screen needs, key bindings.
+- `case/README.md`: the 3D-printed case (OpenSCAD), two types, parts, checks, what was and was not verified.
 - `CLAUDE.md`: short rules for AI-assisted sessions.
 
 ## Layout
@@ -35,6 +36,7 @@ panel. See [Status](#status).
 | `components/usb_kbd` | USB host keyboard, HID boot-report parser, key repeat (needs an OTG adapter with its own 5 V) |
 | `components/storage` | microSD mount (1-bit SDMMC) with a fallback to the internal flash FAT partition |
 | `main` | Bring-up firmware (test pattern, keyboard demo) |
+| `case` | 3D-printed case as OpenSCAD code: `case.scad` (shared model), `classic/` (wide bottom bezel) and `equal/` (equal 9 mm bezel), each with STL, STEP and renders; `render.sh`, `sections.py`, `stl2step.py` |
 | `tests/host` | Host unit tests: pixel packer, HID parser, editor, notes, metadata, formatters, RTC registers |
 
 ## Build

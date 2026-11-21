@@ -43,6 +43,15 @@ Per-screen status and the key bindings are in `docs/DESIGN.md`.
 Use `. ~/esp/esp-idf/export.sh` in each new shell. Note that it puts a Python venv first in `PATH` that has no Pillow;
 use `/usr/bin/python3 -I` for anything that needs Pillow (fonts, host renders).
 
+### The case (`case/`, added 2026-11-21 to this file)
+
+An OpenSCAD model of a two-part printed case (front housing, back cover, three button pins), in two types that share `case/case.scad`:
+`classic/` (9 mm bezel left, right and top, 25 mm at the bottom with the wordmark) and `equal/` (9 mm on all four sides; bottom screws
+and guide pins at the edge, smaller wordmark). Each has `stl/`, `step/` (faceted STEP made from the STL, not real CAD) and `renders/`.
+**Host only:** the clash, clearance, pin and fit checks pass for both types (`case/render.sh`). **Nothing printed or fitted yet**, so the button
+feel, the screw pilot holes, the USB-C and microSD windows and the engraved wordmark are untried. The PNG views of the `equal` type are not
+rendered yet (they need a display). Details and assumptions: `case/README.md`. The RTC cell and a stand are not modelled yet.
+
 ## 2. Flashing
 
 The current `sdkconfig` was generated with the `sdkconfig.usbhost` overlay (USB host on, UART0 console), so
@@ -78,6 +87,7 @@ Because the app gives no on-screen indication of where notes are stored, check t
 | PWR button | The middle button; holding it powers the board off, so it is a power control, not an app key. KEY (left, GPIO18) and BOOT (right, GPIO0) are readable; KEY was not tested. |
 | Battery ADC (GPIO4) | Not tested; the UI must say "Not calibrated" until readings are verified. |
 | Does USB-C charge the 18650? | Not confirmed (watch the CHG LED). |
+| Case fit | Print one test boss (pilot hole 1.8 mm for M2 thread-forming screws), a button pin set and one housing; check the USB-C and microSD windows with the real plug and card, and the cell diameter with the real 18650. Both case types. |
 | Flash size | 16 MB, set. The partition table is still 3 MB app + 3 MB FAT; about 10 MB are unused. Growing `storage` reformats `/data`. |
 | BLE keyboard | No longer urgent now that a powered OTG adapter works, but a portable device would still need it: the ESP32-S3 has Bluetooth LE only (no Classic), so only BLE HID keyboards can work. ESP-IDF has `examples/bluetooth/esp_hid_host`. |
 

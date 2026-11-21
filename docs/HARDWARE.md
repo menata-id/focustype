@@ -59,7 +59,7 @@ frame on the back of the PCB, X +-38.9 x Y 21.1 mm, walls 15.2 mm tall, with the
 the PCB in the Waveshare photo). A cell lies on the PCB, so it sticks out past the frame rim: a typical 18650 is 18.0-18.6 mm
 x 65 mm with the wrap, a protected one longer and up to about 19 mm (general knowledge, not from Waveshare). **The user gives the
 cell as type 18650, a cylinder 18 mm in diameter and 65 mm long**, so its back is about 18 mm behind the PCB, 2.8 mm behind
-the frame rim. The case models 18.0 x 65 mm (`cell_d`, `cell_len` in `case/case.scad`) with 0.8 mm clearance. Measure the
+the frame rim. The case (both types) models 18.0 x 65 mm (`cell_d`, `cell_len` in `case/case.scad`) with 0.8 mm clearance. Measure the
 real cell if it has a protection board or a thick wrap: diameter, length, and the distance from the back face of the PCB
 to the back of the cell.
 

@@ -9,7 +9,8 @@ The code builds and runs on the board. **Run on the board (2026-10-29): panel, H
 USB keyboard (through a powered OTG adapter), the microSD at boot, and the RTC time setting. Built and only host-checked (rendered
 on the host, never seen on the panel): Search, Look up, Preview, Details, Rename and its panels, the empty-note hint.** Say which
 of the two a thing is; never call a host-only screen "working". Remaining from the mockup: Device status and the recovery draft.
-Known gaps (SD hot-swap, RTC needs a backup cell) are in `docs/HANDOFF.md`. The mockup (Claude Design artifact
+Known gaps (SD hot-swap, RTC needs a backup cell) are in `docs/HANDOFF.md`. The printed case is in `case/` (two types, `classic` and
+`equal`, host-checked only, nothing printed); read `case/README.md` before touching it and never edit the original type's geometry without being asked. The mockup (Claude Design artifact
 `T8zGCdmbkZBKXvRYoEt3x9`, readable with the Artifact tool) is the source of truth for screens; list every choice the mockup does
 not make. Source ESP-IDF with `. ~/esp/esp-idf/export.sh` (its Python venv has no Pillow; use `/usr/bin/python3 -I` for that).
 

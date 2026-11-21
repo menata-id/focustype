@@ -129,8 +129,9 @@ already works with 9.0 mm. Outline 102.8 x 81.6 mm (type 1 is 102.8 x 97.6). Wha
 - Bottom bezel 9.0 mm (`bezel_w`), like left, right and top. The buttons stay on the +Y edge.
 - The two bottom cover screws and the two guide pins move to the edge, like the top ones: 5.6 mm bosses (not 6.4 mm) 0.6 mm from the PCB.
   There is no room left in the middle of a wide band, so they sit where the top screws sit.
-- The wordmark is smaller (`logo_size` 4 instead of 6) so that it fits the 7.9 mm flat bezel. It is a choice, not from the mockup; set `logo = ""`
-  in `equal/equal.scad` (after the include) to leave it out. Not seen on a print.
+- **No wordmark** (`logo = ""` in `equal/equal.scad`). A 4 mm "FocusType_" fits the 7.9 mm flat bezel but its strokes are only about 0.6-0.8 mm
+  (measured on the glyph shapes, not on a print), 1.5 to 2 nozzle widths, and the counters are smaller still, so it was dropped. To bring it back
+  remove that line (the text is then size 4, `logo_size` in `case.scad`) and print a test bezel first. The housing is 19.7 mm3 heavier without it.
 - Everything else (window, walls, pocket, buttons, foam, cover) is shared with type 1.
 
 Checked on the host only (nothing printed): the same clash, 0.45 mm clearance, pin, pin-path and cover-fit checks as type 1, and the
@@ -154,7 +155,7 @@ these meshes. Four zero-area triangles that the STL had are dropped (they are on
 
 ## Wordmark
 
-The mockup header uses **IBM Plex Sans, weight 700 (Bold), letter-spacing 0.04 em** for "FocusType" (see the mockup's
+Type 1 (`classic`) only: type 2 (`equal`) has none, see above. The mockup header uses **IBM Plex Sans, weight 700 (Bold), letter-spacing 0.04 em** for "FocusType" (see the mockup's
 Home screen). The case uses the same: `logo_font = "IBM Plex Sans:style=Bold"`, `spacing = 1.04`, loaded from
 `../third_party/ibm-plex/IBMPlexSans-Bold.ttf` so it does not depend on installed fonts. The underscore is not in the mockup.
 

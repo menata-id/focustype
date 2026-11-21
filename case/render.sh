@@ -10,6 +10,7 @@ case "$T" in classic|equal) ;; *) echo "usage: $0 [classic|equal]"; exit 2;; esa
 SCAD="$T/$T.scad"
 mkdir -p "$T/renders" "$T/stl"
 TMP=$(mktemp -d)
+for p in assembly exploded cutaway housing cover buttons buttons_print; do openscad -o "$T/stl/$p.stl" -D "part=\"$p\"" "$SCAD" 2>/dev/null; done
 SIZE=1200,900
 R() { # name part camera extra...
     name=$1; part=$2; cam=$3; shift 3
@@ -34,7 +35,6 @@ elif [ -x .venv/bin/python ]; then   # no display: draw the main views offscreen
 else
     echo "renders: PNG views skipped (no display, no xvfb-run, no .venv)"
 fi
-for p in assembly exploded cutaway housing cover buttons buttons_print; do openscad -o "$T/stl/$p.stl" -D "part=\"$p\"" "$SCAD" 2>/dev/null; done
 
 # Each check must come out empty (OpenSCAD says "empty" when the intersection is nothing). Extra arguments are passed on.
 chk() { # label part extra...

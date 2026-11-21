@@ -47,9 +47,9 @@ use `/usr/bin/python3 -I` for anything that needs Pillow (fonts, host renders).
 
 An OpenSCAD model of a two-part printed case (front housing, back cover, three button pins), in two types that share `case/case.scad`:
 `classic/` (9 mm bezel left, right and top, 25 mm at the bottom with the wordmark) and `equal/` (9 mm on all four sides; bottom screws
-and guide pins at the edge, smaller wordmark). Each has `stl/`, `step/` (faceted STEP made from the STL, not real CAD) and `renders/`.
+and guide pins at the edge, no wordmark). Each has `stl/`, `step/` (faceted STEP made from the STL, not real CAD) and `renders/`.
 **Host only:** the clash, clearance, pin and fit checks pass for both types (`case/render.sh`). **Nothing printed or fitted yet**, so the button
-feel, the screw pilot holes, the USB-C and microSD windows and the engraved wordmark are untried. The PNG views of the `equal` type were drawn
+feel, the screw pilot holes, the USB-C and microSD windows and the engraved wordmark (`classic` only) are untried. The PNG views of the `equal` type were drawn
 without a display (`case/render_views.py`), not by OpenSCAD. Details and assumptions: `case/README.md`. The RTC cell and a stand are not modelled yet.
 
 ## 2. Flashing

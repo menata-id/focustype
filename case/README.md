@@ -135,6 +135,9 @@ already works with 9.0 mm. Outline 102.8 x 81.6 mm (type 1 is 102.8 x 97.6). Wha
 - **No wordmark** (`logo = ""` in `equal/equal.scad`). A 4 mm "FocusType_" fits the 7.9 mm flat bezel but its strokes are only about 0.6-0.8 mm
   (measured on the glyph shapes, not on a print), 1.5 to 2 nozzle widths, and the counters are smaller still, so it was dropped. To bring it back
   remove that line (the text is then size 4, `logo_size` in `case.scad`) and print a test bezel first. The housing is 19.7 mm3 heavier without it.
+- **Thicker button flange** (`btn_fl_t = 1.2` in `equal/equal.scad`, 0.4 on `classic`): easier to print and stronger. The extra 0.8 mm grows into the rib, not towards the board: the flange's
+  back face stays where it was, so the nose keeps its length and its 1.0 mm of trim stock, and one slot (`btn_slot`, 0.8 mm deep) in the rib face holds all three flanges
+  (separate pockets would leave 0.5 mm walls). Host-checked only (clash, clearance, pin path); not printed.
 - Everything else (window, walls, pocket, buttons, foam, cover) is shared with type 1.
 
 Checked on the host only (nothing printed): the same clash, 0.45 mm clearance, pin, pin-path and cover-fit checks as type 1, and the

@@ -114,6 +114,8 @@ btn_clear = 0.25;              // sliding clearance each side; the hole is the p
 btn_edge = 0.45;               // round-over of the front edge of the head
 btn_head_out = 0.8;            // how far the head stands out of the wall
 btn_fl_w = 9.0; btn_fl_h = 7.5; btn_fl_t = 0.40;   // flange behind the rib: stops the pin from falling out
+btn_fl_back = 0.40;            // how far the flange reaches back from y_stop (towards the board): fixes the nose length. Thickness beyond this grows INTO the rib, into a slot (btn_slot)
+btn_slot = btn_fl_t - btn_fl_back;   // depth of the slot cut in the rib face for the thicker flange (0 = no slot)
 btn_nose_w = 3.0; btn_nose_h = 1.6;// nose that meets the plunger tip
 y_rib = 36.4;                  // face of the (thinned) rib the flange rests on: the rib is 2.2 mm thick, was 3.9, so the nose is 1.5 mm long and can be trimmed to fit
 btn_stock = 1.0;               // extra nose length on the printed pins, to be trimmed off when fitting (see buttons_print)
@@ -160,8 +162,8 @@ module button_pin(xc, stock = 0) {
             ybar(y_head - btn_edge - 0.01, y_head - btn_edge, btn_w, btn_h, btn_r);
             ybar(y_head - 0.01, y_head, btn_w - 2 * btn_edge, btn_h - 2 * btn_edge, max(btn_r - btn_edge, 0.1));
         }
-        ybar(y_stop - btn_fl_t, y_stop + 0.01, btn_fl_w, btn_fl_h, btn_r);         // flange behind the rib: bigger than the hole, but it never has to pass through it
-        ybar(btn_tip_y + 0.05 - stock, y_stop - btn_fl_t + 0.01, btn_nose_w, btn_nose_h, 0.4);   // nose on the plunger
+        ybar(y_stop - btn_fl_back, y_stop - btn_fl_back + btn_fl_t, btn_fl_w, btn_fl_h, btn_r);         // flange behind the rib: bigger than the hole, but it never has to pass through it
+        ybar(btn_tip_y + 0.05 - stock, y_stop - btn_fl_back + 0.01, btn_nose_w, btn_nose_h, 0.4);   // nose on the plunger
     }
 }
 module buttons(stock = 0) for (x = btn_x) button_pin(x, stock);
@@ -189,6 +191,12 @@ module housing() {
         xwindow(in_x1 - 1, wall + 2, usb_y, (usb_z0 + usb_z1) / 2, usb_win_w, usb_win_h, 2.0);
         // microSD: slot for the card to enter and be pinched out
         xwindow(in_x1 - 1, wall + 2, (sd_y0 + sd_y1) / 2, sd_win_zc, sd_win_w, sd_win_h, 0.9);
+        // slot in the rib face for the thick flange: one slot for all three (the flanges are 1.0 mm apart, separate pockets would leave 0.5 mm walls)
+        if (btn_slot > 0)
+            translate([0, y_rib - 0.01, btn_zc]) rotate([-90, 0, 0]) translate([0, 0, 0]) linear_extrude(btn_slot + 0.01) {
+                // (drawn in XY with Y = -Z)
+                hull() for (x = [btn_x[0] - btn_fl_w / 2 - btn_clear + btn_r, btn_x[2] + btn_fl_w / 2 + btn_clear - btn_r], z = [-btn_fl_h / 2 - btn_clear + btn_r, btn_fl_h / 2 + btn_clear - btn_r]) translate([x, z]) circle(btn_r, $fn = 32);
+            }
         // three side buttons: rounded tunnels for the printed pins
         for (x = btn_x) ywindow(y_rib - 0.3, out_y1 - y_rib + 1.0, x, btn_zc, btn_w + 2 * btn_clear, btn_h + 2 * btn_clear, btn_r + btn_clear);
         if (logo != "")

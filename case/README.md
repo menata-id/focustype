@@ -14,6 +14,7 @@ case.scad            the shared model (every parameter); not used directly
 classic/classic.scad type 1: includes ../case.scad          classic/stl, classic/step, classic/renders
 equal/equal.scad     type 2: includes ../case.scad, sets equal_bezel = true     equal/stl, equal/step, equal/renders
 render.sh [type]     checks, STL, PNG views and section drawings for one type (no argument: both)
+render_views.py [type]  seven coloured PNG views offscreen (VTK), when there is no display for OpenSCAD's own PNGs
 sections.py [type]   the section drawings and gaps.txt (called by render.sh)
 stl2step.py [type]   the printed parts as STEP, <type>/step/*.stp (cadquery, see "STEP files")
 ```
@@ -136,8 +137,10 @@ Checked on the host only (nothing printed): the same clash, 0.45 mm clearance, p
 18.6 x 70 mm cell, all pass for type 2 (`./render.sh equal`). The cell pocket is under the PCB and about 32.5 mm from the centre, so it is not
 affected by the narrower bottom. `equal/renders/sections_*.png` and `gaps.txt` are drawn for type 2 (the bottom cut is at Y = -38, through the
 bosses and pins at the edge); the smallest gaps are the same as in type 1 (the changed area has 0.6 mm to the PCB, like the top).
-Not verified: the OpenSCAD PNG views of type 2 (`render.sh` makes them only with a display; there was none in this session, so
-`equal/renders` has the section drawings and `compare_front.png` only), a real print.
+The PNG views in `equal/renders/` (`assembly_front`, `assembly_back`, `housing_front`, `housing_back`, `cover_back`, `exploded`, `cutaway`) were
+drawn without a display by `render_views.py` (VTK, from the STL and the board, cell and foam parts), not by OpenSCAD, so the camera angles differ a
+little from OpenSCAD's and the cell's cut face shows some triangulation lines. The section drawings and `compare_front.png` are there too.
+Not verified: a real print.
 
 ## STEP files
 

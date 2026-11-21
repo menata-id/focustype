@@ -1,7 +1,7 @@
 #!/bin/sh
 # Usage: ./render.sh [classic|equal]   (no argument: both types)
 # For one type: PNG views into <type>/renders/, STL into <type>/stl/, the clash and clearance checks, and the section drawings.
-# Needs openscad (2021.01 is enough). The PNG views need a display: run under xvfb-run if there is none (they are skipped otherwise).
+# Needs openscad (2021.01 is enough). The OpenSCAD PNG views need a display (xvfb-run); without one render_views.py draws seven views offscreen instead.
 set -e
 cd "$(dirname "$0")"
 if [ $# -eq 0 ]; then "$0" classic && "$0" equal; exit $?; fi
@@ -29,8 +29,10 @@ if [ -n "$DISPLAY" ] || command -v xvfb-run >/dev/null 2>&1; then
     R exploded       exploded 0,0,10,70,0,25,520
     R cutaway        cutaway  -10,-10,-2,65,0,60,330
     R buttons_close  assembly 0,36,-1,75,0,200,90
+elif [ -x .venv/bin/python ]; then   # no display: draw the main views offscreen with VTK instead (render_views.py)
+    .venv/bin/python render_views.py "$T" 2>&1 | grep -v WARN
 else
-    echo "renders: PNG views skipped (no display and no xvfb-run)"
+    echo "renders: PNG views skipped (no display, no xvfb-run, no .venv)"
 fi
 for p in assembly exploded cutaway housing cover buttons buttons_print; do openscad -o "$T/stl/$p.stl" -D "part=\"$p\"" "$SCAD" 2>/dev/null; done
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Section drawings of the case round the board, with the gaps between them measured and labelled.
 
-Cuts the printed parts (stl/housing.stl, stl/cover.stl) and a dummy of the board (parts and cell, from case.scad) with
+Cuts the printed parts (<type>/stl/housing.stl, cover.stl) and a dummy of the board (parts and cell, from case.scad) with
 planes, draws the cut faces, and for each cut finds where the board is closest to the case and writes the distance on the
 drawing. Writes renders/sections_front.png (vertical cuts along the long side, seen from the front of the device),
 renders/sections_side.png (vertical cuts across it) and renders/sections_plan.png (horizontal cuts, seen from the front),
@@ -20,7 +20,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, "renders")
+TYPE = sys.argv[1] if len(sys.argv) > 1 else "classic"      # "classic" (wide bottom bezel) or "equal" (equal bezel on all sides)
+if TYPE not in ("classic", "equal"):
+    sys.exit("usage: sections.py [classic|equal]")
+TYPE_DIR = os.path.join(HERE, TYPE)
+OUT = os.path.join(TYPE_DIR, "renders")
 TMP = tempfile.mkdtemp(prefix="focustype_sec_")
 LIMIT = 3.0      # label gaps smaller than this (mm)
 CONTACT = 0.1    # closer than this is a deliberate contact (standoff ends on the cover, button nose just off the plunger)
@@ -30,13 +34,13 @@ SNUG = 0.55      # up to this is a designed small gap (glass 0.3 mm under the fr
 
 def scad(part):
     f = os.path.join(TMP, part + ".stl")
-    subprocess.run(["openscad", "-o", f, "-D", 'part="%s"' % part, os.path.join(HERE, "case.scad")],
+    subprocess.run(["openscad", "-o", f, "-D", 'part="%s"' % part, os.path.join(TYPE_DIR, TYPE + ".scad")],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return trimesh.load(f)
 
 
 def load_all():
-    case = [trimesh.load(os.path.join(HERE, "stl", n + ".stl")) for n in ("housing", "cover", "buttons")]
+    case = [trimesh.load(os.path.join(TYPE_DIR, "stl", n + ".stl")) for n in ("housing", "cover", "buttons")]
     return case, scad("board_parts"), scad("battery"), [scad("foam_gasket"), scad("cell_pads")]
 
 
@@ -172,6 +176,11 @@ def sheet(name, cuts, ncols, case, board, cell, foam, labels, report, mm_per_inc
     plt.close(fig)
 
 
+# The cut through the bottom screw bosses, guide pins and the engraved text: the bosses sit in the wide band (type classic) or at the edge (type equal).
+BOTTOM_CUT = ("Y", -45.7, "Cut at Y = -45.7: bottom screw bosses (X -20, 44), guide pins (X -35, 30), engraved text") if TYPE == "classic" else \
+             ("Y", -38.0, "Cut at Y = -38.0: bottom screw bosses (X -20, 44), guide pins (X -35, 30), at the edge like the top ones")
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     case, board, cell, foam = load_all()
@@ -184,7 +193,7 @@ def main():
                              ("Y", 31.05, "Cut at Y = 31.05: through the top standoffs"),
                              ("Y", 37.9, "Cut at Y = 37.9: through the top screw bosses and the button tunnels"),
                              ("Y", 40.5, "Cut at Y = 40.5: the button heads in their holes"),
-                             ("Y", -45.7, "Cut at Y = -45.7: bottom screw bosses (X -20, 44), guide pins (X -35, 30), engraved text")],
+                             BOTTOM_CUT],
           2, case, board, cell, foam, labels, rep, 14.0)
     sheet("sections_side", [("X", 0.0, "Cut at X = 0: buttons, header, cell, from the side"),
                             ("X", 42.75, "Cut at X = 42.75: through the standoffs"),

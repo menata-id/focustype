@@ -1,6 +1,7 @@
 // FocusType case for the Waveshare ESP32-S3-RLCD-4.2 (V2). Replaces the acrylic back plate and stand.
 // Units: mm. Read case/ref/README.md first: every board number below comes from the Waveshare STEP/DXF unless marked ASSUMED.
 //
+// This is the shared model for both types (classic/classic.scad and equal/equal.scad include it; equal_bezel = true gives the equal-bezel type).
 // Two printed parts:
 //   housing  front frame and walls in one piece (print face down: the front has no seams or screws);
 //   cover    back plate with a pocket for the battery; 6 M2 thread-forming screws go from the back into pilot holes in the

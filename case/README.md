@@ -2,17 +2,31 @@
 
 OpenSCAD model of a two-part case (front housing and back cover) for the Waveshare ESP32-S3-RLCD-4.2 (V2). It replaces the
 acrylic back plate and stand. All dimensions are parameters at the top of `case.scad`; the sources of the board numbers
-are in `ref/README.md`. The look follows the reference photo the user gave: equal bezel left, right and top, a wide
-bottom bezel with the wordmark engraved in it, and no screws on the front.
+are in `ref/README.md`. There are **two types**, in their own folders, built from the same model:
+
+| Type | Folder | Bezel |
+|---|---|---|
+| 1 `classic` | `classic/` | the look of the reference photo the user gave: 9 mm left, right and top, a wide 25 mm bottom bezel with the wordmark engraved in it, no screws on the front |
+| 2 `equal` | `equal/` | 9 mm on all four sides (see "Type 2" below) |
 
 ```
-./render.sh        # PNG into renders/, STL into stl/, the clash and clearance checks, and the section drawings
-openscad -D 'part="housing"' case.scad   # one part: housing, cover, buttons, board, assembly, section, check
+case.scad            the shared model (every parameter); not used directly
+classic/classic.scad type 1: includes ../case.scad          classic/stl, classic/step, classic/renders
+equal/equal.scad     type 2: includes ../case.scad, sets equal_bezel = true     equal/stl, equal/step, equal/renders
+render.sh [type]     checks, STL, PNG views and section drawings for one type (no argument: both)
+sections.py [type]   the section drawings and gaps.txt (called by render.sh)
+stl2step.py [type]   the printed parts as STEP, <type>/step/*.stp (cadquery, see "STEP files")
 ```
 
-Needs `openscad` (2021.01 is enough). Headless, run it under `xvfb-run`. The section drawings (`sections.py`) need a venv at
-`case/.venv` with `trimesh networkx shapely matplotlib` (`cadquery` was only used to read the Waveshare STEP); `render.sh` skips
-them if it is missing. The venv is not committed.
+```
+./render.sh equal                                   # one type; ./render.sh does both
+cd equal && openscad -D 'part="housing"' equal.scad # one part: housing, cover, buttons, board, assembly, section, check
+```
+
+Needs `openscad` (2021.01 is enough). The PNG views need a display (under `xvfb-run` if headless; `render.sh` skips them otherwise). The section drawings (`sections.py`) and
+the STEP files (`stl2step.py`) need a venv at `case/.venv` with `trimesh networkx shapely matplotlib cadquery`; `render.sh` skips
+the sections if it is missing. The venv is not committed. The rest of this file describes both types except where it says otherwise;
+paths like `stl/` and `renders/` are inside the type's folder.
 
 ## Parts and how they go together
 
@@ -103,27 +117,37 @@ How the board sits in the case, and what protects it (all added to the model; no
   leave at least 1.0 mm of plastic under them.
 - Not added: corner bumpers, and locating ribs for the PCB edge (the board is fixed by the cover screws and the guide pins).
 
-## Type 2: equal bezel on all four sides (`case_equal.scad`)
+## Type 2: equal bezel on all four sides (`equal/`)
 
-A second type next to the original. The original (`case.scad`, `stl/housing.stl`, `stl/cover.stl`, ...) is unchanged: wide bottom
-bezel with the wordmark. Type 2 is `case_equal.scad`, which includes `case.scad` and sets `equal_bezel = true`; its files are
-`stl/equal_*.stl`, `renders/equal_compare_front.png` (front of both housings side by side). Parts: `equal_housing`, `equal_cover`,
-`equal_buttons`, `equal_buttons_print` (same pins), plus `equal_assembly` and `equal_exploded` for looking.
+The original is type 1 (`classic/`, wide bottom bezel with the wordmark) and its geometry is unchanged (volume and bounding box of the housing
+and cover compared before and after adding type 2). Type 2 is `equal/equal.scad`, which includes `../case.scad` and sets `equal_bezel = true`.
+Its files are in `equal/stl`, `equal/step` and `equal/renders` (`compare_front.png` shows the front of both housings side by side).
 
 **It is possible**, because the PCB is centred in Y: it reaches 2.76 mm past the active area at the bottom as well as at the top, and the top
-already works with 9.0 mm. Outline 102.8 x 81.6 mm (the original is 102.8 x 97.6). What changes against the original:
+already works with 9.0 mm. Outline 102.8 x 81.6 mm (type 1 is 102.8 x 97.6). What changes against type 1:
 - Bottom bezel 9.0 mm (`bezel_w`), like left, right and top. The buttons stay on the +Y edge.
 - The two bottom cover screws and the two guide pins move to the edge, like the top ones: 5.6 mm bosses (not 6.4 mm) 0.6 mm from the PCB.
   There is no room left in the middle of a wide band, so they sit where the top screws sit.
 - The wordmark is smaller (`logo_size` 4 instead of 6) so that it fits the 7.9 mm flat bezel. It is a choice, not from the mockup; set `logo = ""`
-  in `case_equal.scad` (after the include) to leave it out. Not seen on a print.
-- Everything else (window, walls, pocket, buttons, foam, cover) is shared with the original.
+  in `equal/equal.scad` (after the include) to leave it out. Not seen on a print.
+- Everything else (window, walls, pocket, buttons, foam, cover) is shared with type 1.
 
-Checked on the host only (nothing printed): the same clash, 0.45 mm clearance, pin, pin-path and cover-fit checks as the original, and the
-18.6 x 70 mm cell, all pass for type 2 (`./render.sh`). The cell pocket is under the PCB and about 32.5 mm from the centre, so it is not
-affected by the narrower bottom. The original's volume and bounding box were compared before and after the edit and are identical.
-Not verified: the OpenSCAD PNG renders of type 2 (no display in this session; `render.sh` does not make them yet), the section drawings
-(`sections.py` still describes the original), a real print.
+Checked on the host only (nothing printed): the same clash, 0.45 mm clearance, pin, pin-path and cover-fit checks as type 1, and the
+18.6 x 70 mm cell, all pass for type 2 (`./render.sh equal`). The cell pocket is under the PCB and about 32.5 mm from the centre, so it is not
+affected by the narrower bottom. `equal/renders/sections_*.png` and `gaps.txt` are drawn for type 2 (the bottom cut is at Y = -38, through the
+bosses and pins at the edge); the smallest gaps are the same as in type 1 (the changed area has 0.6 mm to the PCB, like the top).
+Not verified: the OpenSCAD PNG views of type 2 (`render.sh` makes them only with a display; there was none in this session, so
+`equal/renders` has the section drawings and `compare_front.png` only), a real print.
+
+## STEP files
+
+`<type>/step/housing.stp`, `cover.stp` and `buttons_print.stp` (the printed parts) are made from the STL files by `stl2step.py`, for slicers and
+CAD tools that want STEP. **They are not real CAD models**: an STL is a triangle mesh, so every triangle is one STEP face (about 6000 in a
+housing), holes and corner radii stay polygons, and you cannot pick a flat face or change a dimension. Change the design in `case.scad`
+and run the script again. Checked by reading the files back (cadquery): valid solids, volume and bounding box equal to the STL
+(`buttons_print` is three solids, one per pin). Not opened in a slicer or a CAD program. The files are large (9 to 14 MB each, about 52 MB
+in all) because of the faceting. Merging coplanar triangles (`ShapeUpgrade_UnifySameDomain`) was tried and crashes OpenCASCADE 7.9 on
+these meshes. Four zero-area triangles that the STL had are dropped (they are on straight edges; the volume does not change).
 
 ## Wordmark
 
@@ -133,7 +157,7 @@ Home screen). The case uses the same: `logo_font = "IBM Plex Sans:style=Bold"`, 
 
 ## What has actually been checked
 
-- **Done (on the host only, nothing printed or fitted):** the model renders. `./render.sh` runs three checks and stops on a failure:
+- **Done (on the host only, nothing printed or fitted):** the model renders. `./render.sh` runs six checks per type and stops on a failure:
   no intersection between the case and the board dummy (cell 18 x 65), no part of the case closer than 0.45 mm sideways to the board
   (this is what caught the top bosses at 0.24 mm from the PCB and the button rib at 0.34 mm, both now 0.6 mm or more), and a
   worst-case protected cell (18.6 x 70) still fits. The clash check was shown to be able to fail: with `-D clear=-1` it reports a clash.

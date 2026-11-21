@@ -14,6 +14,7 @@
 use <../third_party/ibm-plex/IBMPlexSans-Bold.ttf>   // the wordmark font; not installed system-wide, so load the file
 
 part = "assembly";
+equal_bezel = false;  // false: the original case (wide bottom bezel, 25 mm). true: the second type, the bottom bezel as wide as the others (bezel_w, 9 mm)
 gap_min = 0.45;       // smallest sideways gap allowed between the case and the board (check_gap)
 $fn = 32;
 
@@ -55,7 +56,7 @@ edge_front = 0.8;     // 45 degree chamfer round the front face (a chamfer print
 edge_back = 1.0;      // same, round the back face of the cover
 logo = "FocusType_";  // engraved 0.4 mm into the bottom bezel; "" for none. Face-down printing bridges the engraving: check the print.
 logo_font = "IBM Plex Sans:style=Bold";   // the mockup header wordmark: IBM Plex Sans, weight 700, letter-spacing 0.04 em
-logo_size = 6;
+logo_size = equal_bezel ? 4.0 : 6;   // the equal-bezel type has 7.9 mm of flat bezel, not 22 mm: the wordmark is smaller
 
 // ---- build choices ----
 wall = 2.2;           // housing wall
@@ -83,18 +84,21 @@ cover_z = rim_z - cover_t;            // back face, -9.0
 top_z = lcd_front + glass_gap;        // underside of the front frame
 
 out_x0 = aa_x0 - bezel_w; out_x1 = aa_x1 + bezel_w;
-out_y0 = aa_y0 - (bottom_neg ? bottom_w : bezel_w);
-out_y1 = aa_y1 + (bottom_neg ? bezel_w : bottom_w);
+bottom_eff = equal_bezel ? bezel_w : bottom_w;
+out_y0 = aa_y0 - (bottom_neg ? bottom_eff : bezel_w);
+out_y1 = aa_y1 + (bottom_neg ? bezel_w : bottom_eff);
 in_x0 = out_x0 + wall; in_x1 = out_x1 - wall;
 in_y0 = out_y0 + wall; in_y1 = out_y1 - wall;
 bay_x = bat_x + bay_clear;     // half length of the pocket along X: the holder (end contacts) plus clearance
 
 // the 6 cover screws [x, y, boss diameter]: 2 in the left wall, 2 on the narrow edge, 2 in the wide band. None near the board.
 y_narrow = bottom_neg ? out_y1 - boss_d / 2 : out_y0 + boss_d / 2;
-y_wide = bottom_neg ? (pcb_y0 + out_y0) / 2 : (pcb_y1 + out_y1) / 2;
+y_wide = equal_bezel ? (bottom_neg ? out_y0 + boss_d / 2 : out_y1 - boss_d / 2)     // equal bezel: the bottom bosses sit like the top ones, 0.6 mm from the PCB
+                     : (bottom_neg ? (pcb_y0 + out_y0) / 2 : (pcb_y1 + out_y1) / 2);
+boss_b = equal_bezel ? boss_d : boss_d_wide;   // boss diameter in the bottom band
 screws = [[out_x0 + boss_d / 2, 22, boss_d], [out_x0 + boss_d / 2, -22, boss_d],
           [-20, y_narrow, boss_d], [in_x1 - boss_d / 2, y_narrow, boss_d],
-          [-20, y_wide, boss_d_wide], [in_x1 - boss_d_wide / 2, y_wide, boss_d_wide]];   // the right ones touch the +X wall
+          [-20, y_wide, boss_b], [in_x1 - boss_b / 2, y_wide, boss_b]];   // the right ones touch the +X wall
 pin_pos = [[-35, y_wide], [30, y_wide]];      // guide pins: in the wide band, 65 mm apart, away from the board and from the screws
 pocket_floor_z = -(cell_dmax + pocket_clear);  // lowest inner point of the battery pocket, -19.1
 pad_seat_z = pocket_floor_z - pad_seat;

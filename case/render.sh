@@ -68,6 +68,16 @@ else
     echo "check: FAIL, a cell of 18.6 x 70 does not fit:"; echo "$out" | tail -5; exit 1
 fi
 
+# Type 2 (equal bezel, case_equal.scad): its own STL files (stl/equal_*.stl) and the same checks. The original files are not touched.
+for p in assembly exploded; do openscad -o "stl/equal_$p.stl" -D "part=\"$p\"" case_equal.scad 2>/dev/null; done
+for p in housing cover buttons buttons_print; do openscad -o "stl/equal_$p.stl" -D "part=\"$p\"" case_equal.scad 2>/dev/null; done
+for chk in check check_gap check_pins check_pin_path check_fit; do
+    out=$(openscad -o /tmp/focustype_eq_check.stl -D "part=\"$chk\"" case_equal.scad 2>&1 || true)
+    if echo "$out" | grep -qi "empty"; then echo "equal-bezel $chk: OK"; else echo "equal-bezel $chk: FAIL"; echo "$out" | tail -5; exit 1; fi
+done
+out=$(openscad -o /tmp/focustype_eq_check.stl -D 'part="check"' -D cell_d=18.6 -D cell_len=70 case_equal.scad 2>&1 || true)
+if echo "$out" | grep -qi "empty"; then echo "equal-bezel check, cell 18.6 x 70: OK"; else echo "equal-bezel cell 18.6 x 70: FAIL"; exit 1; fi
+
 # Section drawings with the gaps measured (needs the venv with trimesh, networkx, shapely, matplotlib).
 if [ -x .venv/bin/python ]; then
     .venv/bin/python sections.py > /dev/null && echo "sections: renders/sections_front.png, sections_side.png, sections_plan.png, gaps.txt"

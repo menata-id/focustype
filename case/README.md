@@ -103,6 +103,28 @@ How the board sits in the case, and what protects it (all added to the model; no
   leave at least 1.0 mm of plastic under them.
 - Not added: corner bumpers, and locating ribs for the PCB edge (the board is fixed by the cover screws and the guide pins).
 
+## Type 2: equal bezel on all four sides (`case_equal.scad`)
+
+A second type next to the original. The original (`case.scad`, `stl/housing.stl`, `stl/cover.stl`, ...) is unchanged: wide bottom
+bezel with the wordmark. Type 2 is `case_equal.scad`, which includes `case.scad` and sets `equal_bezel = true`; its files are
+`stl/equal_*.stl`, `renders/equal_compare_front.png` (front of both housings side by side). Parts: `equal_housing`, `equal_cover`,
+`equal_buttons`, `equal_buttons_print` (same pins), plus `equal_assembly` and `equal_exploded` for looking.
+
+**It is possible**, because the PCB is centred in Y: it reaches 2.76 mm past the active area at the bottom as well as at the top, and the top
+already works with 9.0 mm. Outline 102.8 x 81.6 mm (the original is 102.8 x 97.6). What changes against the original:
+- Bottom bezel 9.0 mm (`bezel_w`), like left, right and top. The buttons stay on the +Y edge.
+- The two bottom cover screws and the two guide pins move to the edge, like the top ones: 5.6 mm bosses (not 6.4 mm) 0.6 mm from the PCB.
+  There is no room left in the middle of a wide band, so they sit where the top screws sit.
+- The wordmark is smaller (`logo_size` 4 instead of 6) so that it fits the 7.9 mm flat bezel. It is a choice, not from the mockup; set `logo = ""`
+  in `case_equal.scad` (after the include) to leave it out. Not seen on a print.
+- Everything else (window, walls, pocket, buttons, foam, cover) is shared with the original.
+
+Checked on the host only (nothing printed): the same clash, 0.45 mm clearance, pin, pin-path and cover-fit checks as the original, and the
+18.6 x 70 mm cell, all pass for type 2 (`./render.sh`). The cell pocket is under the PCB and about 32.5 mm from the centre, so it is not
+affected by the narrower bottom. The original's volume and bounding box were compared before and after the edit and are identical.
+Not verified: the OpenSCAD PNG renders of type 2 (no display in this session; `render.sh` does not make them yet), the section drawings
+(`sections.py` still describes the original), a real print.
+
 ## Wordmark
 
 The mockup header uses **IBM Plex Sans, weight 700 (Bold), letter-spacing 0.04 em** for "FocusType" (see the mockup's

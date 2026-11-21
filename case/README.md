@@ -66,7 +66,7 @@ pass the hole. (An earlier version had a head bigger than the stem and could not
 every position along the path of each pin into its tunnel is clear.)
 
 **Thin rib, long nose, trim to fit.** The rib behind the wall (the reinforcement the flange rests on) was 3.9 mm thick; it is now 2.2 mm
-(`y_rib` = 36.4), so the tunnel is 4.4 mm long and the nose between the flange and the switch is about 1.6 mm. The printed pins
+(`y_rib` = 36.4), so the tunnel is 4.4 mm long and the nose between the flange and the switch is about 1.6 mm (flange 0.4 mm thick on `classic`; `equal` has 1.2 mm, grown into a rib slot, see Type 2). The printed pins
 (`stl/buttons_print.stl`) have 1.0 mm of extra nose (`btn_stock`): fit the pin, see where the nose meets the plunger, and trim the nose
 (blade or sandpaper) until it just clears it. That absorbs about +-0.5 mm of error in the board position and in the printed housing,
 instead of the 0.3 mm the first design allowed. The cost is a shorter guide: the pin width is now 1.6 times the guide length, above the
@@ -89,7 +89,7 @@ because the tunnel is horizontal when the housing is printed face down.
   the first 5.0 x 2.6 mm); 8 x 8 mm would fit but may bind and leaves heads only 2.0 mm apart. Ergonomic figures are general guidance
   (a fingertip pad is about 8-10 mm wide), not from a standard I read.
 
-Print the pins with the head on the bed and the stem up; the flange then overhangs 0.75 mm each side and 1.0 mm top and bottom. Not
+Print the pins with the head on the bed and the stem up; the flange then overhangs 0.75 mm each side (same for both flange thicknesses) and 1.0 mm top and bottom. Not
 printed or tried: the feel, the travel (a side switch like this moves about 0.25 mm; the pin can move 0.05 mm in and out of its
 stops) and whether the flange prints cleanly. `render.sh` checks that the pins do not touch the housing or the board.
 
@@ -100,6 +100,8 @@ stops) and whether the flange prints cleanly. `render.sh` checks that the pins d
 They are one colour there; `renders/exploded.png` and `renders/cutaway.png` show the parts in colour.
 
 ## Foam, guide pins and cell cushions
+
+(Guide pins: `classic` only. `equal` has `guide_pins = false`, see Type 2.)
 
 How the board sits in the case, and what protects it (all added to the model; none of it printed or tried):
 
@@ -116,7 +118,7 @@ How the board sits in the case, and what protects it (all added to the model; no
   side of the middle, under the cell, so it cannot hammer the holder contacts when the case is dropped. With a nominal 18 mm cell the
   1.5 mm foam is squeezed to 1.3 mm. With a 18.6 mm cell it would be squeezed to 0.7 mm (about half): use 1.0 mm foam then. The seats
   leave at least 1.0 mm of plastic under them.
-- Not added: corner bumpers, and locating ribs for the PCB edge (the board is fixed by the cover screws and the guide pins).
+- Not added: corner bumpers, and locating ribs for the PCB edge (the board is fixed by the cover screws and, on `classic`, the guide pins).
 
 ## Type 2: equal bezel on all four sides (`equal/`)
 
@@ -172,7 +174,7 @@ Home screen). The case uses the same: `logo_font = "IBM Plex Sans:style=Bold"`, 
   (this is what caught the top bosses at 0.24 mm from the PCB and the button rib at 0.34 mm, both now 0.6 mm or more), and a
   worst-case protected cell (18.6 x 70) still fits. The clash check was shown to be able to fail: with `-D clear=-1` it reports a clash.
 - **Section drawings** (`sections.py`, written to `renders/`): `sections_front.png` (cuts along the long side seen from the front,
-  like the section in the mockup), `sections_side.png` (cuts across it, including the guide pin and a cell cushion) and `sections_plan.png` (flat cuts at six depths). Grey is the
+  like the section in the mockup), `sections_side.png` (cuts across it, including the guide pin (`classic` only) and a cell cushion) and `sections_plan.png` (flat cuts at six depths). Grey is the
   case, green the board, orange the cell, pink the foam, and the smallest distances between them are labelled in mm; `gaps.txt` has the same numbers.
   Smallest sideways gaps now: PCB to the button rib 0.60, to the top bosses 0.64, to the left bosses 1.14, to the +X wall 1.34 (room for
   the flex), glass to the walls 1.4, battery holder to the pocket 0.49 all round and 0.8 at its ends, the cell to the pocket floor 1.1
